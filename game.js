@@ -1515,20 +1515,20 @@ class Explosion {
     }
 }
 
-// 비행기 그리기 함수
-function drawAirplane(x, y, width, height, color, isEnemy = false) {
-    ctx.save();
-    if (!isEnemy) {
-        // 플레이어: 준비된 이미지를 그대로 그림
-        ctx.drawImage(playerImage, x, y, width, height);
-    } else {
-        // 적: 이미지 사용
-        ctx.translate(x + width/2, y + height/2);
-        ctx.scale(1, -1); // 아래로 향하도록 뒤집기
-        ctx.drawImage(enemyPlaneImage, -width/2, -height/2, width, height);
-    }
-    ctx.restore();
-}
+// 비행기 그리기 함수 (이미지 로딩 체크 포함 버전으로 대체됨)
+// function drawAirplane(x, y, width, height, color, isEnemy = false) {
+//     ctx.save();
+//     if (!isEnemy) {
+//         // 플레이어: 준비된 이미지를 그대로 그림
+//         ctx.drawImage(playerImage, x, y, width, height);
+//     } else {
+//         // 적: 이미지 사용
+//         ctx.translate(x + width/2, y + height/2);
+//         ctx.scale(1, -1); // 아래로 향하도록 뒤집기
+//         ctx.drawImage(enemyPlaneImage, -width/2, -height/2, width, height);
+//     }
+//     ctx.restore();
+// }
 
 // 게임 루프 수정
 function gameLoop() {
@@ -1679,8 +1679,19 @@ function gameLoop() {
         requestAnimationFrame(gameLoop);
     } catch (error) {
         console.error('게임 루프 실행 중 오류:', error);
-        // 오류 발생 시 게임 오버 처리
-        handleGameOver();
+        
+        // 이미지 관련 오류인지 확인
+        if (error.message && error.message.includes('drawImage') && error.message.includes('broken')) {
+            console.warn('이미지 로딩 오류 감지 - 기본 도형 모드로 전환');
+            // 이미지 로딩 상태를 false로 설정하여 기본 도형 사용
+            imagesLoaded.player = false;
+            imagesLoaded.enemy = false;
+            // 게임 계속 진행
+            requestAnimationFrame(gameLoop);
+        } else {
+            // 다른 오류의 경우 게임 오버 처리
+            handleGameOver();
+        }
     }
 }
 
@@ -2452,6 +2463,11 @@ window.addEventListener('load', async () => {
             throw new Error('Canvas 또는 Context를 찾을 수 없습니다.');
         }
         console.log('Canvas 초기화 확인됨');
+        
+        // 이미지 로딩 시작
+        console.log('이미지 로딩 시작...');
+        await loadImages();
+        console.log('이미지 로딩 완료');
         
         // 시작 화면 초기화
         initStartScreen();
@@ -4182,7 +4198,62 @@ function handleCollisionEffects() {
 
 // 전역에 이미지 객체 생성
 const playerImage = new Image();
-playerImage.src = 'images/player.png'; // 파일명 수정
+const enemyPlaneImage = new Image();
+
+// 이미지 로딩 상태 추적
+let imagesLoaded = {
+    player: false,
+    enemy: false
+};
+
+// 이미지 로딩 함수
+function loadImages() {
+    return new Promise((resolve) => {
+        let loadedCount = 0;
+        const totalImages = 2;
+        
+        // 5초 타임아웃 설정
+        const timeout = setTimeout(() => {
+            console.warn('이미지 로딩 타임아웃 - 기본 도형으로 진행');
+            resolve();
+        }, 5000);
+        
+        function checkAllLoaded() {
+            loadedCount++;
+            if (loadedCount === totalImages) {
+                clearTimeout(timeout);
+                console.log('모든 이미지 로딩 완료');
+                resolve();
+            }
+        }
+        
+        // 플레이어 이미지 로딩
+        playerImage.onload = () => {
+            console.log('플레이어 이미지 로딩 완료');
+            imagesLoaded.player = true;
+            checkAllLoaded();
+        };
+        playerImage.onerror = (error) => {
+            console.error('플레이어 이미지 로딩 실패:', error);
+            imagesLoaded.player = false;
+            checkAllLoaded();
+        };
+        playerImage.src = 'images/player.png';
+        
+        // 적 이미지 로딩
+        enemyPlaneImage.onload = () => {
+            console.log('적 이미지 로딩 완료');
+            imagesLoaded.enemy = true;
+            checkAllLoaded();
+        };
+        enemyPlaneImage.onerror = (error) => {
+            console.error('적 이미지 로딩 실패:', error);
+            imagesLoaded.enemy = false;
+            checkAllLoaded();
+        };
+        enemyPlaneImage.src = 'images/enemyplane.png';
+    });
+}
 
 // 사운드 play 함수 예외처리 래퍼
 function safePlay(audio) {
@@ -4359,19 +4430,39 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // ... existing code ...
 
-// 전역에 추가
-const enemyPlaneImage = new Image();
-enemyPlaneImage.src = 'images/enemyPlane.png';
+// 전역에 추가 (이미 위에서 선언됨)
+// const enemyPlaneImage = new Image();
+// enemyPlaneImage.src = 'images/enemyPlane.png';
 
 function drawAirplane(x, y, width, height, color, isEnemy = false) {
     ctx.save();
-    if (!isEnemy) {
-        ctx.drawImage(playerImage, x, y, width, height);
-    } else {
-        // 적: 이미지 사용
-        ctx.translate(x + width/2, y + height/2);
-        ctx.scale(1, -1); // 아래로 향하도록 뒤집기
-        ctx.drawImage(enemyPlaneImage, -width/2, -height/2, width, height);
+    try {
+        if (!isEnemy) {
+            // 플레이어 이미지가 로드되었는지 확인
+            if (imagesLoaded.player && playerImage.complete && playerImage.naturalWidth > 0) {
+                ctx.drawImage(playerImage, x, y, width, height);
+            } else {
+                // 이미지가 로드되지 않은 경우 기본 도형으로 그리기
+                ctx.fillStyle = color || 'white';
+                ctx.fillRect(x, y, width, height);
+            }
+        } else {
+            // 적 이미지가 로드되었는지 확인
+            if (imagesLoaded.enemy && enemyPlaneImage.complete && enemyPlaneImage.naturalWidth > 0) {
+                ctx.translate(x + width/2, y + height/2);
+                ctx.scale(1, -1); // 아래로 향하도록 뒤집기
+                ctx.drawImage(enemyPlaneImage, -width/2, -height/2, width, height);
+            } else {
+                // 이미지가 로드되지 않은 경우 기본 도형으로 그리기
+                ctx.fillStyle = color || 'red';
+                ctx.fillRect(x, y, width, height);
+            }
+        }
+    } catch (error) {
+        console.warn('drawAirplane 오류:', error);
+        // 오류 발생 시 기본 도형으로 그리기
+        ctx.fillStyle = isEnemy ? (color || 'red') : (color || 'white');
+        ctx.fillRect(x, y, width, height);
     }
     ctx.restore();
 }
