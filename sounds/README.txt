@@ -1,0 +1,1 @@
+이 폴더에 shoot.mp3, explosion.mp3, collision.mp3, levelup.mp3 등 게임 효과음 파일을 넣으세요. 

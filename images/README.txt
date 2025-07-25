@@ -1,0 +1,1 @@
+이 폴더에 player.png, enemyPlane.png 등 게임 이미지 파일을 넣으세요. 
