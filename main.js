@@ -27,9 +27,9 @@ let mainWindow = null;
 function createWindow() {
   const windowOptions = {
     width: 1500,
-    height: 1000,
+    height: 950, // 캔버스 높이 감소에 맞춰 창 높이 조정
     minWidth: 800,
-    minHeight: 900,
+    minHeight: 850, // 최소 높이도 조정
     resizable: true,
     backgroundColor: '#E0E0E0',
     title: `썬더볼트 슈팅게임 v${version}`,

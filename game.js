@@ -24,7 +24,7 @@ function resizeCanvas() {
         
         // 캔버스 크기를 원래대로 복구
         canvas.width = 750;  // 원래 크기로 복구
-        canvas.height = 850;  // 원래 크기로 복구
+        canvas.height = 800;  // 캔버스 높이를 800픽셀로 수정
     }
 }
 
@@ -4301,9 +4301,7 @@ window.addEventListener('keydown', (e) => {
 function createSoundControlPanel() {
     const panel = document.createElement('div');
     panel.id = 'sound-control-panel';
-    panel.style.position = 'fixed';
-    panel.style.right = '30px';
-    panel.style.bottom = '30px';
+    panel.style.position = 'static'; // fixed에서 static으로 변경
     panel.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
     panel.style.padding = '12px';
     panel.style.borderRadius = '8px';
@@ -4318,6 +4316,7 @@ function createSoundControlPanel() {
     panel.style.gap = '5px';
     panel.style.boxSizing = 'border-box';
     panel.style.boxShadow = '0 2px 12px rgba(0,0,0,0.2)';
+    panel.style.margin = '0 auto'; // 가운데 정렬
 
     // 볼륨 컨트롤 추가
     const volumeControl = document.createElement('div');
@@ -4332,8 +4331,14 @@ function createSoundControlPanel() {
     `;
     panel.appendChild(volumeControl);
 
-    // body에 패널 추가
-    document.body.appendChild(panel);
+    // 캔버스 컨테이너 다음에 패널 추가
+    const canvasContainer = document.getElementById('canvas-container');
+    if (canvasContainer && canvasContainer.parentNode) {
+        canvasContainer.parentNode.insertBefore(panel, canvasContainer.nextSibling);
+    } else {
+        // fallback: body에 추가
+        document.body.appendChild(panel);
+    }
     setupSoundControlEvents();
     setupPanelDrag(panel);
 }
@@ -4376,16 +4381,29 @@ function setupPanelDrag(panel) {
     let initialY;
     let xOffset = 0;
     let yOffset = 0;
+    let originalPosition = 'static';
 
     // 드래그 시작
     panel.addEventListener('mousedown', (e) => {
         if (e.target.tagName === 'INPUT') return;  // 볼륨 슬라이더는 드래그 방지
         
-        initialX = e.clientX - xOffset;
-        initialY = e.clientY - yOffset;
-        
         if (e.target === panel || e.target.parentNode === panel) {
             isDragging = true;
+            
+            // 드래그 시작 시 position을 absolute로 변경
+            if (panel.style.position === 'static') {
+                originalPosition = 'static';
+                panel.style.position = 'absolute';
+                panel.style.top = '50%';
+                panel.style.left = '50%';
+                panel.style.transform = 'translate(-50%, -50%)';
+                panel.style.margin = '0';
+            }
+            
+            const rect = panel.getBoundingClientRect();
+            initialX = e.clientX - rect.left;
+            initialY = e.clientY - rect.top;
+            
             panel.style.transition = 'none';  // 드래그 중 애니메이션 제거
         }
     });
@@ -4398,11 +4416,10 @@ function setupPanelDrag(panel) {
             currentX = e.clientX - initialX;
             currentY = e.clientY - initialY;
             
-            xOffset = currentX;
-            yOffset = currentY;
-            
             // 패널 위치 업데이트
-            panel.style.transform = `translate(${currentX}px, ${currentY}px)`;
+            panel.style.left = `${currentX}px`;
+            panel.style.top = `${currentY}px`;
+            panel.style.transform = 'none'; // transform 초기화
         }
     });
 
