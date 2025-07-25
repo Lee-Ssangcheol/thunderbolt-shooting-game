@@ -29,8 +29,5 @@
 - 보스 전투
 - 효과음 시스템
 
-## 개발자
-Lee SS C
-
 ## 라이선스
-LSC License 
+MIT License 
