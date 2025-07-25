@@ -30,7 +30,7 @@
 - 효과음 시스템
 
 ## 개발자
-길동이 아저씨
+Lee SS C
 
 ## 라이선스
-MIT License 
+LSC License 
