@@ -1,0 +1,30 @@
+html, body {
+  width: 100vw;
+  height: 100vh;
+  background: #E0E0E0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+body {
+  margin: 0;
+  padding: 0;
+  background: #E0E0E0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#canvas-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+#gameCanvas {
+  display: block;
+  margin: auto;
+  background: #000;
+  border-radius: 0;
+} 
