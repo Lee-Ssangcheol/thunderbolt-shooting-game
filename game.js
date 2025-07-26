@@ -40,26 +40,50 @@ const explosionSound = new Audio();
 const collisionSound = new Audio();
 const levelUpSound = new Audio();  // 레벨업 효과음 추가
 
-// 사운드 파일 경로 설정
-if (window.electronAPI) {
-    window.electronAPI.getSoundPath('shoot.mp3').then(path => {
-        shootSound.src = path;
-    });
-    window.electronAPI.getSoundPath('explosion.mp3').then(path => {
-        explosionSound.src = path;
-    });
-    window.electronAPI.getSoundPath('collision.mp3').then(path => {
-        collisionSound.src = path;
-    });
-    window.electronAPI.getSoundPath('levelup.mp3').then(path => {
-        levelUpSound.src = path;
-    });
-} else {
-    shootSound.src = 'sounds/shoot.mp3';
-    explosionSound.src = 'sounds/explosion.mp3';
-    collisionSound.src = 'sounds/collision.mp3';
-    levelUpSound.src = 'sounds/levelup.mp3';
+// 사운드 파일 경로 설정 함수
+async function initializeSounds() {
+    if (window.electronAPI) {
+        try {
+            const shootPath = await window.electronAPI.getSoundPath('shoot.mp3');
+            const explosionPath = await window.electronAPI.getSoundPath('explosion.mp3');
+            const collisionPath = await window.electronAPI.getSoundPath('collision.mp3');
+            const levelupPath = await window.electronAPI.getSoundPath('levelup.mp3');
+            
+            console.log('사운드 경로들:');
+            console.log('shoot:', shootPath);
+            console.log('explosion:', explosionPath);
+            console.log('collision:', collisionPath);
+            console.log('levelup:', levelupPath);
+            
+            shootSound.src = shootPath;
+            explosionSound.src = explosionPath;
+            collisionSound.src = collisionPath;
+            levelUpSound.src = levelupPath;
+            
+            console.log('사운드 초기화 완료 (Electron)');
+        } catch (error) {
+            console.error('사운드 초기화 실패:', error);
+        }
+    } else {
+        shootSound.src = 'sounds/shoot.mp3';
+        explosionSound.src = 'sounds/explosion.mp3';
+        collisionSound.src = 'sounds/collision.mp3';
+        levelUpSound.src = 'sounds/levelup.mp3';
+        console.log('사운드 초기화 완료 (웹)');
+    }
 }
+
+// window.electronAPI가 준비될 때까지 대기 후 사운드 초기화
+const waitForAPIAndInitSounds = () => {
+    if (window.electronAPI) {
+        initializeSounds();
+    } else {
+        setTimeout(waitForAPIAndInitSounds, 50);
+    }
+};
+
+// 사운드 초기화 시작
+waitForAPIAndInitSounds();
 
 // 사운드 설정
 shootSound.volume = 0.1;  // 발사음 볼륨

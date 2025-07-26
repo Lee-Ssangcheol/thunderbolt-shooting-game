@@ -8,7 +8,7 @@ const version = packageJson.version;
 
 // 리소스 경로 설정
 const resourcePath = app.isPackaged
-  ? path.join(process.resourcesPath)
+  ? path.join(process.resourcesPath, 'resources')
   : path.join(__dirname);
 
 // 아이콘 경로 설정 - 절대 경로 사용
@@ -153,14 +153,16 @@ function createWindow() {
   // IPC 핸들러 설정
   ipcMain.handle('get-sound-path', (event, filename) => {
     const soundPath = path.join(resourcePath, 'sounds', filename);
-    console.log('사운드 경로:', soundPath);
-    return soundPath;
+    const fileUrl = `file:///${soundPath.replace(/\\/g, '/')}`;
+    console.log('사운드 경로:', fileUrl);
+    return fileUrl;
   });
 
   ipcMain.handle('get-resource-path', (event, filename) => {
     const resourceFilePath = path.join(resourcePath, 'images', filename);
-    console.log('리소스 경로:', resourceFilePath);
-    return resourceFilePath;
+    const fileUrl = `file:///${resourceFilePath.replace(/\\/g, '/')}`;
+    console.log('리소스 경로:', fileUrl);
+    return fileUrl;
   });
 }
 
