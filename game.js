@@ -39,7 +39,7 @@ class GameSoundManager {
     constructor() {
         this.sounds = {};
         this.initialized = false;
-        this.volume = 0.3;
+        this.volume = 0.1;
         this.enabled = true;
         this.lastCollisionTime = 0;
         this.collisionSoundCooldown = 300;
@@ -4492,10 +4492,13 @@ function setupSoundControlEvents() {
     const volumeValue = document.getElementById('volume-value');
     
     if (sfxVolumeSlider && volumeValue) {
-        // 초기 볼륨 설정
-        const initialVolume = Math.round(gameSoundManager.getVolume() * 100);
+        // 초기 볼륨 설정 - 10%로 고정
+        const initialVolume = 10;
         sfxVolumeSlider.value = initialVolume;
         volumeValue.textContent = `${initialVolume}%`;
+        
+        // 사운드 매니저도 10%로 설정
+        gameSoundManager.setVolume(0.1);
         
         sfxVolumeSlider.addEventListener('input', function(e) {
             e.stopPropagation();  // 이벤트 전파 중단
