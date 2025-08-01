@@ -2438,28 +2438,25 @@ function drawUI() {
     ctx.fillStyle = 'white';
     ctx.font = '20px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText(`점수: ${score}`, 20, 70);
-    ctx.fillText(`레벨: ${gameLevel} (${getDifficultyName(gameLevel)})`, 20, 100);
-    ctx.fillText(`다음 레벨까지: ${levelUpScore - levelScore}`, 20, 130);
-    ctx.fillText(`최고 점수: ${highScore}`, 20, 160);
-    ctx.fillText(`최고 점수 리셋: R키`, 20, 190);
-    ctx.fillText(`다음 확산탄까지: ${500 - scoreForSpread}점`, 20, 220);
+    ctx.fillText(`점수: ${score}`, 20, 40);
+    ctx.fillText(`레벨: ${gameLevel} (${getDifficultyName(gameLevel)})`, 20, 70);
+    ctx.fillText(`다음 레벨까지: ${levelUpScore - levelScore}`, 20, 100);
+    ctx.fillText(`최고 점수: ${highScore}`, 20, 130);
+    ctx.fillText(`최고 점수 리셋: R키`, 20, 160);
+    ctx.fillText(`다음 확산탄까지: ${500 - scoreForSpread}점`, 20, 190);
     if (!hasSecondPlane) {
         const nextPlaneScore = Math.ceil(score / 2000) * 2000;  // 8000 * gameLevel에서 2000으로 변경
-        ctx.fillText(`다음 추가 비행기까지: ${nextPlaneScore - score}점`, 20, 250);
+        ctx.fillText(`다음 추가 비행기까지: ${nextPlaneScore - score}점`, 20, 220);
     } else {
         const remainingTime = Math.ceil((10000 - (Date.now() - secondPlaneTimer)) / 1000);
-        ctx.fillText(`추가 비행기 남은 시간: ${remainingTime}초`, 20, 250);
+        ctx.fillText(`추가 비행기 남은 시간: ${remainingTime}초`, 20, 220);
     }
-    ctx.fillText(`일시정지: P키`, 20, 280);
-    // 방어 코드 추가
-    const currentDifficulty = difficultySettings[gameLevel] || difficultySettings[3];
-    ctx.fillText(`현재 적 수: ${enemies.length}/${currentDifficulty.maxEnemies}`, 20, 310);
+    ctx.fillText(`일시정지: P키`, 20, 250);
     
     // 충돌 횟수 표시 (붉은색으로)
     ctx.fillStyle = 'red';
     ctx.font = 'bold 20px Arial';  // 폰트를 진하게 변경
-    ctx.fillText(`남은 목숨: ${maxLives - collisionCount}`, 20, 340);
+    ctx.fillText(`남은 목숨: ${maxLives - collisionCount}`, 20, 280);
 
     // 제작자 정보 표시
     ctx.fillStyle = 'white';
@@ -2471,18 +2468,18 @@ function drawUI() {
     if (!specialWeaponCharged) {
         // 게이지 바 배경
         ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.fillRect(20, 360, 200, 20);
+        ctx.fillRect(20, 310, 200, 20);
         
         // 게이지 바
         ctx.fillStyle = 'rgba(0, 255, 255, 0.8)';
-        ctx.fillRect(20, 360, (specialWeaponCharge / SPECIAL_WEAPON_MAX_CHARGE) * 200, 20);
+        ctx.fillRect(20, 310, (specialWeaponCharge / SPECIAL_WEAPON_MAX_CHARGE) * 200, 20);
         
         // 게이지 바 위에 텍스트 표시
         ctx.fillStyle = 'white';
         ctx.font = 'bold 16px Arial';
         ctx.textAlign = 'center';
         const percentText = `특수 무기 : ${Math.floor((specialWeaponCharge / SPECIAL_WEAPON_MAX_CHARGE) * 100)}%`;
-        ctx.fillText(percentText, 120, 375);
+        ctx.fillText(percentText, 120, 325);
     } else {
         // 깜빡이는 효과를 위한 시간 계산
         const blinkSpeed = 500; // 깜빡임 속도 (밀리초)
@@ -2491,29 +2488,29 @@ function drawUI() {
         
         // 배경색 설정 (게이지 바)
         ctx.fillStyle = isRed ? 'rgba(255, 0, 0, 0.3)' : 'rgba(0, 0, 255, 0.3)';
-        ctx.fillRect(10, 340, 200, 20);
+        ctx.fillRect(10, 290, 200, 20);
         
         // 테두리 효과
         ctx.strokeStyle = isRed ? 'red' : 'cyan';
         ctx.lineWidth = 2;
-        ctx.strokeRect(10, 340, 200, 20);
+        ctx.strokeRect(10, 290, 200, 20);
         
         // 게이지 바 위에 텍스트 표시
         ctx.fillStyle = 'white';
         ctx.font = 'bold 16px Arial';
         ctx.textAlign = 'center';
         const percentText = `특수 무기 : ${Math.floor((specialWeaponCharge / SPECIAL_WEAPON_MAX_CHARGE) * 100)}%`;
-        ctx.fillText(percentText, 120, 355);
+        ctx.fillText(percentText, 120, 305);
         
         // 준비 완료 메시지 배경
         ctx.fillStyle = isRed ? 'rgba(255, 0, 0, 0.2)' : 'rgba(0, 0, 255, 0.2)';
-        ctx.fillRect(10, 360, 300, 30);
+        ctx.fillRect(10, 310, 300, 30);
         
         // 텍스트 색상 설정
         ctx.fillStyle = isRed ? 'red' : 'cyan';
         ctx.font = 'bold 20px Arial';
         ctx.textAlign = 'left';
-        ctx.fillText('특수 무기 준비 완료(영문 \'B\' 클릭 발사)', 15, 380);  // N을 B로 변경
+        ctx.fillText('특수 무기 준비 완료(영문 \'B\' 클릭 발사)', 15, 330);  // N을 B로 변경
     }
     
     // 보스 체력 표시 개선
