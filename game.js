@@ -1341,7 +1341,7 @@ function updateEnemyPosition(enemy, options = {}) {
         }
         
         // 헬리콥터 총알 발사
-        if (!enemy.fireCooldown) enemy.fireCooldown = 2500 + Math.random()*1000;
+        if (!enemy.fireCooldown) enemy.fireCooldown = 1250 + Math.random()*500; // 2500에서 1250으로 단축
         if (!enemy.lastFireTime) enemy.lastFireTime = 0;
         if (!options.helicopterFiredThisFrame && currentTime - enemy.lastFireTime > enemy.fireCooldown) {
             // 플레이어 방향 각도 계산
@@ -1360,7 +1360,7 @@ function updateEnemyPosition(enemy, options = {}) {
                 isBossBullet: enemy.isBoss
             });
             enemy.lastFireTime = currentTime;
-            enemy.fireCooldown = 2500 + Math.random()*1000;
+            enemy.fireCooldown = 1250 + Math.random()*500; // 2500에서 1250으로 단축
             if (options) options.helicopterFiredThisFrame = true;
         }
     } else if (enemy.type === ENEMY_TYPES.PLANE) {
@@ -2257,11 +2257,37 @@ function checkEnemyCollisions(enemy) {
                     return true;
                 }
                 
-                explosions.push(new Explosion(
-                    enemy.x + enemy.width/2,
-                    enemy.y + enemy.height/2
-                ));
-                updateScore(10);
+                // 보호막이 없는 헬리콥터 파괴 시 보스와 동일한 시각효과 적용
+                if (enemy.type === ENEMY_TYPES.HELICOPTER || enemy.type === ENEMY_TYPES.HELICOPTER2) {
+                    // 큰 폭발 효과 (보스와 동일)
+                    explosions.push(new Explosion(
+                        enemy.x + enemy.width/2,
+                        enemy.y + enemy.height/2,
+                        true
+                    ));
+                    
+                    // 추가 폭발 효과 (보스와 동일)
+                    for (let i = 0; i < 8; i++) {
+                        const angle = (Math.PI * 2 / 8) * i;
+                        const distance = 50;
+                        explosions.push(new Explosion(
+                            enemy.x + enemy.width/2 + Math.cos(angle) * distance,
+                            enemy.y + enemy.height/2 + Math.sin(angle) * distance,
+                            false
+                        ));
+                    }
+                    
+                    // 헬리콥터 파괴 시 보너스 점수
+                    updateScore(enemy.score || 150);
+                } else {
+                    // 일반 비행기 파괴 시 기존 효과
+                    explosions.push(new Explosion(
+                        enemy.x + enemy.width/2,
+                        enemy.y + enemy.height/2
+                    ));
+                    updateScore(10);
+                }
+                
                 // 추가: 플레이어 총알이 적 비행기/헬기에 명중 시 발사음 재생
                 safePlaySound('shoot');
             }
@@ -3065,7 +3091,7 @@ const BOSS_SETTINGS = {
     DAMAGE: 50,          // 보스 총알 데미지
     SPEED: 2,           // 보스 이동 속도
     BULLET_SPEED: 5,    // 보스 총알 속도
-    PATTERN_INTERVAL: 5000, // 5초(5000ms)로 단축
+    PATTERN_INTERVAL: 2500, // 5초에서 2.5초(2500ms)로 단축
     SPAWN_INTERVAL: 30000,  // 보스 출현 간격 (30초)
     BONUS_SCORE: 500,    // 보스 처치 보너스 점수를 500으로 설정
     PHASE_THRESHOLDS: [  // 페이즈 전환 체력 임계값
