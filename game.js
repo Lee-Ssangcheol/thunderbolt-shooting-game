@@ -941,7 +941,16 @@ function createEnemy() {
                 health: currentDifficulty.enemyHealth,
                 score: 100 * gameLevel,
                 isElite: Math.random() < (0.05 + (gameLevel * 0.02)),
-                specialAbility: Math.random() < (0.1 + (gameLevel * 0.03)) ? getRandomSpecialAbility() : null
+                specialAbility: Math.random() < (0.1 + (gameLevel * 0.03)) ? getRandomSpecialAbility() : null,
+                // 보호막 시스템 추가
+                shieldHealth: 10,  // 보호막 체력 (10발 맞으면 파괴)
+                maxShieldHealth: 10,
+                shieldActive: true,
+                shieldRadius: 60,  // 보호막 반지름
+                shieldAngle: 0,    // 보호막 회전 각도
+                shieldRotationSpeed: 0.02,  // 보호막 회전 속도
+                hitEffectTimer: 0,  // 피격 효과 타이머
+                hitEffectDuration: 200  // 피격 효과 지속 시간
             };
 
             // 엘리트 적 보너스
@@ -951,6 +960,10 @@ function createEnemy() {
                 enemy.score *= 2;
                 enemy.bulletSpeed *= 1.2;
                 enemy.fireInterval *= 0.8;
+                // 엘리트 적은 보호막도 강화
+                enemy.shieldHealth = 15;
+                enemy.maxShieldHealth = 15;
+                enemy.shieldRadius = 70;
             }
 
             enemies.push(enemy);
@@ -977,7 +990,16 @@ function createEnemy() {
                 health: currentDifficulty.enemyHealth,
                 score: 150 * gameLevel,
                 isElite: Math.random() < (0.05 + (gameLevel * 0.02)),
-                specialAbility: Math.random() < (0.1 + (gameLevel * 0.03)) ? getRandomSpecialAbility() : null
+                specialAbility: Math.random() < (0.1 + (gameLevel * 0.03)) ? getRandomSpecialAbility() : null,
+                // 보호막 시스템 추가
+                shieldHealth: 10,  // 보호막 체력 (10발 맞으면 파괴)
+                maxShieldHealth: 10,
+                shieldActive: true,
+                shieldRadius: 60,  // 보호막 반지름
+                shieldAngle: 0,    // 보호막 회전 각도
+                shieldRotationSpeed: 0.02,  // 보호막 회전 속도
+                hitEffectTimer: 0,  // 피격 효과 타이머
+                hitEffectDuration: 200  // 피격 효과 지속 시간
             };
 
             // 엘리트 헬리콥터 보너스
@@ -987,6 +1009,10 @@ function createEnemy() {
                 helicopter.score *= 2;
                 helicopter.bulletSpeed *= 1.2;
                 helicopter.bombDropInterval *= 0.8;
+                // 엘리트 헬리콥터는 보호막도 강화
+                helicopter.shieldHealth = 15;
+                helicopter.maxShieldHealth = 15;
+                helicopter.shieldRadius = 70;
             }
 
             enemies.push(helicopter);
@@ -2074,6 +2100,45 @@ function checkEnemyCollisions(enemy) {
         }
 
         if (checkCollision(bullet, enemy)) {
+            // 헬리콥터 보호막 처리
+            if ((enemy.type === ENEMY_TYPES.HELICOPTER || enemy.type === ENEMY_TYPES.HELICOPTER2) && 
+                enemy.shieldActive && enemy.shieldHealth > 0) {
+                
+                // 보호막 체력 감소
+                enemy.shieldHealth--;
+                enemy.hitEffectTimer = enemy.hitEffectDuration;
+                
+                // 보호막 피격 효과
+                explosions.push(new Explosion(
+                    bullet.x,
+                    bullet.y,
+                    false
+                ));
+                
+                // 보호막 파괴 시
+                if (enemy.shieldHealth <= 0) {
+                    enemy.shieldActive = false;
+                    // 보호막 파괴 효과
+                    explosions.push(new Explosion(
+                        enemy.x + enemy.width/2,
+                        enemy.y + enemy.height/2,
+                        false,
+                        80  // 보호막 파괴 시 더 큰 폭발
+                    ));
+                    
+                    // 보호막 파괴음 (보스와 동일하게 적용)
+                    safePlaySound('explosion');
+                    safePlaySound('collision');
+                } else {
+                    // 보호막 피격음 (보스와 동일하게 적용)
+                    safePlaySound('collision');
+                    safePlaySound('shoot');
+                }
+                
+                // 총알 제거
+                return false;
+            }
+            
             // 보스인 경우 체력 감소
             if (enemy.isBoss) {
                 const currentTime = Date.now();
@@ -2185,7 +2250,13 @@ function checkEnemyCollisions(enemy) {
                 isHit = true;
                 return false;
             } else {
-                // 일반 적 처치
+                // 일반 적 처치 (보호막이 없는 헬리콥터 또는 일반 비행기)
+                if ((enemy.type === ENEMY_TYPES.HELICOPTER || enemy.type === ENEMY_TYPES.HELICOPTER2) && 
+                    enemy.shieldActive && enemy.shieldHealth > 0) {
+                    // 보호막이 있는 헬리콥터는 이미 위에서 처리됨
+                    return true;
+                }
+                
                 explosions.push(new Explosion(
                     enemy.x + enemy.width/2,
                     enemy.y + enemy.height/2
@@ -2457,6 +2528,27 @@ function drawUI() {
     ctx.fillStyle = 'red';
     ctx.font = 'bold 20px Arial';  // 폰트를 진하게 변경
     ctx.fillText(`남은 목숨: ${maxLives - collisionCount}`, 20, 280);
+    
+    // 보호막 정보 표시
+    const shieldedHelicopters = enemies.filter(enemy => 
+        (enemy.type === ENEMY_TYPES.HELICOPTER || enemy.type === ENEMY_TYPES.HELICOPTER2) && 
+        enemy.shieldActive && enemy.shieldHealth > 0
+    );
+    
+    if (shieldedHelicopters.length > 0) {
+        ctx.fillStyle = '#00ffff';
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(`보호막 헬리콥터: ${shieldedHelicopters.length}대`, 20, 310);
+        
+        // 각 헬리콥터의 보호막 상태 표시
+        shieldedHelicopters.forEach((helicopter, index) => {
+            const shieldPercentage = Math.floor((helicopter.shieldHealth / helicopter.maxShieldHealth) * 100);
+            const color = helicopter.type === ENEMY_TYPES.HELICOPTER2 ? '#FF8C00' : '#20B2AA';
+            ctx.fillStyle = color;
+            ctx.fillText(`헬리콥터${helicopter.type === ENEMY_TYPES.HELICOPTER2 ? '2' : '1'}: ${shieldPercentage}%`, 20, 330 + (index * 20));
+        });
+    }
 
     // 제작자 정보 표시
     ctx.fillStyle = 'white';
@@ -2464,22 +2556,24 @@ function drawUI() {
     ctx.textAlign = 'right';
     ctx.fillText('제작/저작권자:Lee.SS.C', canvas.width - 20, canvas.height - 30); 
 
-    // 특수 무기 게이지 표시
+    // 특수 무기 게이지 표시 (보호막 정보 아래로 이동)
+    const shieldInfoHeight = shieldedHelicopters.length > 0 ? 330 + (shieldedHelicopters.length * 20) : 310;
+    
     if (!specialWeaponCharged) {
         // 게이지 바 배경
         ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.fillRect(20, 310, 200, 20);
+        ctx.fillRect(20, shieldInfoHeight, 200, 20);
         
         // 게이지 바
         ctx.fillStyle = 'rgba(0, 255, 255, 0.8)';
-        ctx.fillRect(20, 310, (specialWeaponCharge / SPECIAL_WEAPON_MAX_CHARGE) * 200, 20);
+        ctx.fillRect(20, shieldInfoHeight, (specialWeaponCharge / SPECIAL_WEAPON_MAX_CHARGE) * 200, 20);
         
         // 게이지 바 위에 텍스트 표시
         ctx.fillStyle = 'white';
         ctx.font = 'bold 16px Arial';
         ctx.textAlign = 'center';
         const percentText = `특수 무기 : ${Math.floor((specialWeaponCharge / SPECIAL_WEAPON_MAX_CHARGE) * 100)}%`;
-        ctx.fillText(percentText, 120, 325);
+        ctx.fillText(percentText, 120, shieldInfoHeight + 15);
     } else {
         // 깜빡이는 효과를 위한 시간 계산
         const blinkSpeed = 500; // 깜빡임 속도 (밀리초)
@@ -2488,29 +2582,29 @@ function drawUI() {
         
         // 배경색 설정 (게이지 바)
         ctx.fillStyle = isRed ? 'rgba(255, 0, 0, 0.3)' : 'rgba(0, 0, 255, 0.3)';
-        ctx.fillRect(10, 290, 200, 20);
+        ctx.fillRect(10, shieldInfoHeight - 20, 200, 20);
         
         // 테두리 효과
         ctx.strokeStyle = isRed ? 'red' : 'cyan';
         ctx.lineWidth = 2;
-        ctx.strokeRect(10, 290, 200, 20);
+        ctx.strokeRect(10, shieldInfoHeight - 20, 200, 20);
         
         // 게이지 바 위에 텍스트 표시
         ctx.fillStyle = 'white';
         ctx.font = 'bold 16px Arial';
         ctx.textAlign = 'center';
         const percentText = `특수 무기 : ${Math.floor((specialWeaponCharge / SPECIAL_WEAPON_MAX_CHARGE) * 100)}%`;
-        ctx.fillText(percentText, 120, 305);
+        ctx.fillText(percentText, 120, shieldInfoHeight - 5);
         
         // 준비 완료 메시지 배경
         ctx.fillStyle = isRed ? 'rgba(255, 0, 0, 0.2)' : 'rgba(0, 0, 255, 0.2)';
-        ctx.fillRect(10, 310, 300, 30);
+        ctx.fillRect(10, shieldInfoHeight, 300, 30);
         
         // 텍스트 색상 설정
         ctx.fillStyle = isRed ? 'red' : 'cyan';
         ctx.font = 'bold 20px Arial';
         ctx.textAlign = 'left';
-        ctx.fillText('특수 무기 준비 완료(영문 \'B\' 클릭 발사)', 15, 330);  // N을 B로 변경
+        ctx.fillText('특수 무기 준비 완료(영문 \'B\' 클릭 발사)', 15, shieldInfoHeight + 20);
     }
     
     // 보스 체력 표시 개선
@@ -2544,22 +2638,24 @@ function drawUI() {
         }
     }
     
-    // 파워업 상태 표시
+    // 파워업 상태 표시 (보호막 정보와 특수 무기 게이지 아래로 이동)
+    const powerUpStartY = shieldInfoHeight + (specialWeaponCharged ? 50 : 30);
+    
     if (hasSpreadShot) {
         ctx.fillStyle = '#ffff00';
-        ctx.fillText('확산탄 활성화', 20, 450);
+        ctx.fillText('확산탄 활성화', 20, powerUpStartY);
     }
     if (hasShield) {
         ctx.fillStyle = '#0000ff';
-        ctx.fillText('실드 활성화', 20, 480);
+        ctx.fillText('실드 활성화', 20, powerUpStartY + 30);
     }
     if (damageMultiplier > 1) {
         ctx.fillStyle = '#ff0000';
-        ctx.fillText('데미지 2배', 20, 510);
+        ctx.fillText('데미지 2배', 20, powerUpStartY + 60);
     }
     if (fireRateMultiplier > 1) {
         ctx.fillStyle = '#ff00ff';
-        ctx.fillText('연사 속도 증가', 20, 540);
+        ctx.fillText('연사 속도 증가', 20, powerUpStartY + 90);
     }
     
     // 총알 크기 정보 표시
@@ -2568,7 +2664,7 @@ function drawUI() {
         ctx.fillStyle = '#ffff00';
         ctx.font = '16px Arial';
         ctx.textAlign = 'left';
-        ctx.fillText(`총알 크기 증가: ${currentBulletSize}`, 20, 570);
+        ctx.fillText(`총알 크기 증가: ${currentBulletSize}`, 20, powerUpStartY + 120);
     }
 }
 
@@ -3663,6 +3759,10 @@ function drawHelicopter(x, y, width, height, rotorAngle) {
     const isBoss = enemies.find(enemy => enemy.x === x && enemy.y === y && enemy.isBoss);
     const isHelicopter2 = enemies.find(enemy => enemy.x === x && enemy.y === y && enemy.type === ENEMY_TYPES.HELICOPTER2);
     
+    // 헬리콥터 객체 찾기 (보호막 정보를 위해)
+    const helicopter = enemies.find(enemy => enemy.x === x && enemy.y === y && 
+        (enemy.type === ENEMY_TYPES.HELICOPTER || enemy.type === ENEMY_TYPES.HELICOPTER2));
+    
     let mainColor, secondaryColor, glassColor, glassBorderColor;
     
     if (isBoss) {
@@ -3680,6 +3780,89 @@ function drawHelicopter(x, y, width, height, rotorAngle) {
         secondaryColor = '#008B8B';  // 다크 시안
         glassColor = '#48D1CC';  // 미디엄 시안
         glassBorderColor = '#008B8B';  // 다크 시안
+    }
+
+    // 보호막 그리기 (헬리콥터 그리기 전에)
+    if (helicopter && helicopter.shieldActive && helicopter.shieldHealth > 0) {
+        // 보호막 회전 업데이트
+        helicopter.shieldAngle += helicopter.shieldRotationSpeed;
+        
+        // 피격 효과 타이머 업데이트
+        if (helicopter.hitEffectTimer > 0) {
+            helicopter.hitEffectTimer -= 16; // 약 60fps 기준
+        }
+        
+        // 보호막 색상 결정
+        let shieldColor, shieldBorderColor;
+        if (isHelicopter2) {
+            // 오렌지 계열 보호막
+            shieldColor = helicopter.hitEffectTimer > 0 ? 
+                'rgba(255, 100, 0, 0.4)' : 'rgba(255, 140, 0, 0.3)';
+            shieldBorderColor = helicopter.hitEffectTimer > 0 ? 
+                'rgba(255, 69, 0, 0.8)' : 'rgba(255, 165, 0, 0.6)';
+        } else {
+            // 블루 계열 보호막
+            shieldColor = helicopter.hitEffectTimer > 0 ? 
+                'rgba(0, 100, 255, 0.4)' : 'rgba(32, 178, 170, 0.3)';
+            shieldBorderColor = helicopter.hitEffectTimer > 0 ? 
+                'rgba(0, 69, 255, 0.8)' : 'rgba(0, 139, 139, 0.6)';
+        }
+        
+        // 보호막 그리기
+        ctx.save();
+        ctx.rotate(helicopter.shieldAngle);
+        
+        // 보호막 배경 (원형)
+        ctx.beginPath();
+        ctx.arc(0, 0, helicopter.shieldRadius, 0, Math.PI * 2);
+        ctx.fillStyle = shieldColor;
+        ctx.fill();
+        
+        // 보호막 테두리
+        ctx.beginPath();
+        ctx.arc(0, 0, helicopter.shieldRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = shieldBorderColor;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        
+        // 보호막 내부 패턴 (육각형)
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = (i * Math.PI) / 3;
+            const radius = helicopter.shieldRadius * 0.7;
+            const px = Math.cos(angle) * radius;
+            const py = Math.sin(angle) * radius;
+            if (i === 0) {
+                ctx.moveTo(px, py);
+            } else {
+                ctx.lineTo(px, py);
+            }
+        }
+        ctx.closePath();
+        ctx.strokeStyle = shieldBorderColor;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // 보호막 체력 표시 (작은 원들)
+        const healthDots = helicopter.maxShieldHealth;
+        const currentHealth = helicopter.shieldHealth;
+        for (let i = 0; i < healthDots; i++) {
+            const dotAngle = (i * Math.PI * 2) / healthDots;
+            const dotRadius = helicopter.shieldRadius * 0.85;
+            const dotX = Math.cos(dotAngle) * dotRadius;
+            const dotY = Math.sin(dotAngle) * dotRadius;
+            
+            ctx.beginPath();
+            ctx.arc(dotX, dotY, 3, 0, Math.PI * 2);
+            if (i < currentHealth) {
+                ctx.fillStyle = shieldBorderColor;
+            } else {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            }
+            ctx.fill();
+        }
+        
+        ctx.restore();
     }
 
     // 1. 메인 로터 (세로로 길게, 끝에 흰색 포인트, 투명도 효과)
