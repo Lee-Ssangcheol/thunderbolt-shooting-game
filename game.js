@@ -2561,20 +2561,7 @@ function drawUI() {
         enemy.shieldActive && enemy.shieldHealth > 0
     );
     
-    if (shieldedHelicopters.length > 0) {
-        ctx.fillStyle = '#00ffff';
-        ctx.font = 'bold 16px Arial';
-        ctx.textAlign = 'left';
-        ctx.fillText(`보호막 헬리콥터: ${shieldedHelicopters.length}대`, 20, 310);
-        
-        // 각 헬리콥터의 보호막 상태 표시
-        shieldedHelicopters.forEach((helicopter, index) => {
-            const shieldPercentage = Math.floor((helicopter.shieldHealth / helicopter.maxShieldHealth) * 100);
-            const color = helicopter.type === ENEMY_TYPES.HELICOPTER2 ? '#FF8C00' : '#20B2AA';
-            ctx.fillStyle = color;
-            ctx.fillText(`헬리콥터${helicopter.type === ENEMY_TYPES.HELICOPTER2 ? '2' : '1'}: ${shieldPercentage}%`, 20, 330 + (index * 20));
-        });
-    }
+
 
     // 제작자 정보 표시
     ctx.fillStyle = 'white';
@@ -2582,8 +2569,8 @@ function drawUI() {
     ctx.textAlign = 'right';
     ctx.fillText('제작/저작권자:Lee.SS.C', canvas.width - 20, canvas.height - 30); 
 
-    // 특수 무기 게이지 표시 (보호막 정보 아래로 이동)
-    const shieldInfoHeight = shieldedHelicopters.length > 0 ? 330 + (shieldedHelicopters.length * 20) : 310;
+    // 특수 무기 게이지 표시
+    const shieldInfoHeight = 310;
     
     if (!specialWeaponCharged) {
         // 게이지 바 배경
@@ -2664,34 +2651,7 @@ function drawUI() {
         }
     }
     
-    // 파워업 상태 표시 (보호막 정보와 특수 무기 게이지 아래로 이동)
-    const powerUpStartY = shieldInfoHeight + (specialWeaponCharged ? 50 : 30);
-    
-    if (hasSpreadShot) {
-        ctx.fillStyle = '#ffff00';
-        ctx.fillText('확산탄 활성화', 20, powerUpStartY);
-    }
-    if (hasShield) {
-        ctx.fillStyle = '#0000ff';
-        ctx.fillText('실드 활성화', 20, powerUpStartY + 30);
-    }
-    if (damageMultiplier > 1) {
-        ctx.fillStyle = '#ff0000';
-        ctx.fillText('데미지 2배', 20, powerUpStartY + 60);
-    }
-    if (fireRateMultiplier > 1) {
-        ctx.fillStyle = '#ff00ff';
-        ctx.fillText('연사 속도 증가', 20, powerUpStartY + 90);
-    }
-    
-    // 총알 크기 정보 표시
-    const currentBulletSize = calculateBulletSize();
-    if (currentBulletSize > baseBulletSize) {
-        ctx.fillStyle = '#ffff00';
-        ctx.font = '16px Arial';
-        ctx.textAlign = 'left';
-        ctx.fillText(`총알 크기 증가: ${currentBulletSize}`, 20, powerUpStartY + 120);
-    }
+
 }
 
 // 게임 시작 이벤트 리스너 수정
