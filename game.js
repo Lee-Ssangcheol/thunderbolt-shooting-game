@@ -253,10 +253,16 @@ let shieldedHelicopterDestroyed = 0;  // 보호막 헬리콥터 파괴 카운터
 
 // 보스 패턴 상수 추가
 const BOSS_PATTERNS = {
-    CIRCLE_SHOT: 'circle_shot',
-    CROSS_SHOT: 'cross_shot',
-    SPIRAL_SHOT: 'spiral_shot',
-    WAVE_SHOT: 'wave_shot'
+    CIRCLE_SHOT: 'circle_shot',      // 원형 발사
+    CROSS_SHOT: 'cross_shot',        // 십자 발사
+    SPIRAL_SHOT: 'spiral_shot',      // 나선형 발사
+    WAVE_SHOT: 'wave_shot',          // 파도형 발사
+    SPREAD_SHOT: 'spread_shot',      // 확산 발사
+    RANDOM_SHOT: 'random_shot',      // 랜덤 발사
+    TRACKING_SHOT: 'tracking_shot',  // 추적 발사
+    BURST_SHOT: 'burst_shot',        // 연발 발사
+    VORTEX_SHOT: 'vortex_shot',      // 소용돌이 발사
+    PULSE_SHOT: 'pulse_shot'         // 맥박형 발사
 };
 
 // 키보드 입력 상태
@@ -916,14 +922,56 @@ function restartGame() {
 
 // 적 생성 함수 수정 - 화면 상단에서 등장하도록 개선
 function createEnemy() {
-    const currentDifficulty = difficultySettings[gameLevel] || difficultySettings[1];
+    // 레벨이 difficultySettings 범위를 벗어난 경우 기본값 사용
+    let currentDifficulty;
+    if (gameLevel <= 5 && difficultySettings[gameLevel]) {
+        currentDifficulty = difficultySettings[gameLevel];
+    } else {
+        // 레벨 5 이후에는 점진적으로 증가하는 난이도 적용
+        const baseLevel = 5;
+        const levelMultiplier = 1 + (gameLevel - baseLevel) * 0.2; // 레벨당 20% 증가
+        
+        currentDifficulty = {
+            enemySpeed: difficultySettings[baseLevel].enemySpeed * levelMultiplier,
+            enemySpawnRate: Math.min(0.9, difficultySettings[baseLevel].enemySpawnRate * levelMultiplier),
+            maxEnemies: Math.min(15, difficultySettings[baseLevel].maxEnemies + Math.floor((gameLevel - baseLevel) / 2)),
+            enemyHealth: Math.floor(difficultySettings[baseLevel].enemyHealth * levelMultiplier),
+            patternChance: Math.min(0.9, difficultySettings[baseLevel].patternChance * levelMultiplier),
+            fireInterval: Math.max(500, difficultySettings[baseLevel].fireInterval / levelMultiplier),
+            bombDropChance: Math.min(0.8, difficultySettings[baseLevel].bombDropChance * levelMultiplier),
+            bulletSpeed: difficultySettings[baseLevel].enemySpeed * levelMultiplier,
+            specialPatternChance: Math.min(0.8, difficultySettings[baseLevel].specialPatternChance * levelMultiplier)
+        };
+    }
+    
+    // 안전장치: currentDifficulty가 undefined인 경우 기본값 사용
+    if (!currentDifficulty) {
+        console.warn(`레벨 ${gameLevel}에 대한 난이도 설정을 찾을 수 없음, 기본값 사용`);
+        currentDifficulty = difficultySettings[1];
+    }
     
     // 헬리콥터 출현 비율을 레벨에 따라 조정
     const isHelicopter = Math.random() < (0.3 + (gameLevel * 0.05));
     
     if (!isBossActive && isHelicopter) {
-        // 일반 헬리콥터와 helicopter2 중에서 선택
-        const isHelicopter2 = Math.random() < 0.5;  // 50% 확률로 helicopter2 생성
+        // 보호막 헬리콥터(헬리콥터1 + 헬리콥터2)가 화면에 4대 이상 있으면 생성하지 않음
+        const currentShieldedHelicopters = enemies.filter(enemy => 
+            (enemy.type === ENEMY_TYPES.HELICOPTER || enemy.type === ENEMY_TYPES.HELICOPTER2) && 
+            enemy.shieldActive
+        ).length;
+        
+        if (currentShieldedHelicopters >= 4) {
+            console.log('보호막 헬리콥터가 이미 4대 있어서 생성하지 않음', {
+                current: currentShieldedHelicopters,
+                max: 4,
+                helicopter1: enemies.filter(enemy => enemy.type === ENEMY_TYPES.HELICOPTER),
+                helicopter2: enemies.filter(enemy => enemy.type === ENEMY_TYPES.HELICOPTER2)
+            });
+            return; // 보호막 헬리콥터 생성 중단
+        }
+        
+        // 일반 헬리콥터와 helicopter2 중에서 선택 (보호막 헬리콥터는 30% 확률로 생성)
+        const isHelicopter2 = Math.random() < 0.3;  // 30% 확률로 helicopter2 생성
         
         if (isHelicopter2) {
             const enemy = {
@@ -1316,8 +1364,10 @@ function updateEnemyPosition(enemy, options = {}) {
 
     // 헬리콥터 처리
     if (enemy.type === ENEMY_TYPES.HELICOPTER || enemy.type === ENEMY_TYPES.HELICOPTER2) {
-        // 헬리콥터 특수 움직임
-        enemy.rotorAngle += enemy.rotorSpeed;
+        // 헬리콥터 특수 움직임 (부드러운 로터 회전)
+        const rotorDeltaTime = currentTime - (enemy.lastRotorUpdate || currentTime);
+        enemy.lastRotorUpdate = currentTime;
+        enemy.rotorAngle += enemy.rotorSpeed * (rotorDeltaTime / 16); // 60fps 기준으로 정규화
         
         // 호버링 효과 개선
         enemy.hoverTimer += deltaTime;
@@ -1799,12 +1849,20 @@ function gameLoop() {
         // 적 생성 및 이동 처리
         handleEnemies();
         
-        // 보스 체크 및 생성
+        // 보스 체크 및 생성 (레벨에 따라 보스 출현 조건 조정)
         const currentTime = Date.now();
-        if (!bossActive) {
+        if (!bossActive && !isBossActive) {
             const timeSinceLastBoss = currentTime - lastBossSpawnTime;
-            if (timeSinceLastBoss >= BOSS_SETTINGS.SPAWN_INTERVAL) {
+            // 레벨에 따라 보스 출현 점수 조건 조정 (더 쉽게)
+            const bossSpawnScore = Math.max(300, gameLevel * 500); // 레벨당 500점씩 증가
+            if (timeSinceLastBoss >= BOSS_SETTINGS.SPAWN_INTERVAL && score >= bossSpawnScore) {
+                console.log(`보스 생성 조건 확인: 점수 ${score}/${bossSpawnScore}, 레벨 ${gameLevel}, 시간: ${timeSinceLastBoss}/${BOSS_SETTINGS.SPAWN_INTERVAL}`);
                 createBoss();
+            } else if (timeSinceLastBoss < BOSS_SETTINGS.SPAWN_INTERVAL) {
+                // 디버깅: 보스 생성 대기 시간 표시
+                if (currentTime % 5000 < 16) { // 5초마다 한 번씩 로그 출력
+                    console.log(`보스 생성 대기 중: 점수 ${score}/${bossSpawnScore}, 레벨 ${gameLevel}, 남은 시간: ${Math.ceil((BOSS_SETTINGS.SPAWN_INTERVAL - timeSinceLastBoss) / 1000)}초`);
+                }
             }
         } else {
             // 보스가 존재하는 경우 보스 패턴 처리
@@ -1813,7 +1871,9 @@ function gameLoop() {
                 handleBossPattern(boss);
             } else {
                 // 보스가 enemies 배열에서 제거된 경우 상태 초기화
+                console.log('보스가 enemies 배열에서 제거됨, 상태 초기화');
                 bossActive = false;
+                isBossActive = false;
                 bossHealth = 0;
                 bossDestroyed = false;
             }
@@ -1898,14 +1958,42 @@ function handlePlayerMovement() {
 // 적 처리 함수 수정 - 적 생성 로직 개선
 function handleEnemies() {
     const currentTime = Date.now();
-    const currentDifficulty = difficultySettings[gameLevel];
+    
+    // 레벨이 difficultySettings 범위를 벗어난 경우 기본값 사용
+    let currentDifficulty;
+    if (gameLevel <= 5 && difficultySettings[gameLevel]) {
+        currentDifficulty = difficultySettings[gameLevel];
+    } else {
+        // 레벨 5 이후에는 점진적으로 증가하는 난이도 적용
+        const baseLevel = 5;
+        const levelMultiplier = 1 + (gameLevel - baseLevel) * 0.2; // 레벨당 20% 증가
+        
+        currentDifficulty = {
+            enemySpeed: difficultySettings[baseLevel].enemySpeed * levelMultiplier,
+            enemySpawnRate: Math.min(0.9, difficultySettings[baseLevel].enemySpawnRate * levelMultiplier),
+            maxEnemies: Math.min(15, difficultySettings[baseLevel].maxEnemies + Math.floor((gameLevel - baseLevel) / 2)),
+            enemyHealth: Math.floor(difficultySettings[baseLevel].enemyHealth * levelMultiplier),
+            patternChance: Math.min(0.9, difficultySettings[baseLevel].patternChance * levelMultiplier),
+            fireInterval: Math.max(500, difficultySettings[baseLevel].fireInterval / levelMultiplier),
+            bombDropChance: Math.min(0.8, difficultySettings[baseLevel].bombDropChance * levelMultiplier),
+            bulletSpeed: difficultySettings[baseLevel].enemySpeed * levelMultiplier,
+            specialPatternChance: Math.min(0.8, difficultySettings[baseLevel].specialPatternChance * levelMultiplier)
+        };
+    }
+    
+    // 안전장치: currentDifficulty가 undefined인 경우 기본값 사용
+    if (!currentDifficulty) {
+        console.warn(`레벨 ${gameLevel}에 대한 난이도 설정을 찾을 수 없음, 기본값 사용`);
+        currentDifficulty = difficultySettings[1];
+    }
+    
     const bossExists = enemies.some(enemy => enemy.type === 'helicopter' && enemy.isBoss);
     
-    // 보스 생성 조건 추가
-    if (score >= 5000 * gameLevel && !isBossActive && !bossExists) {
-        createBoss();
-        isBossActive = true;
-    }
+    // 보스 생성은 gameLoop에서만 처리하도록 주석 처리
+    // if (score >= 1000 && !isBossActive && !bossExists) {
+    //     createBoss();
+    //     isBossActive = true;
+    // }
     
     if (bossExists) {
         isBossActive = true;
@@ -1935,6 +2023,9 @@ function handleEnemies() {
             if (helicopter) {
                 enemies.push(helicopter);
                 lastHelicopterSpawnTime = currentTime;
+                console.log('헬리콥터1이 enemies 배열에 추가됨');
+            } else {
+                console.log('헬리콥터1 생성 실패 - 보호막 헬리콥터 제한에 도달');
             }
         }
     }
@@ -2138,20 +2229,23 @@ function checkEnemyCollisions(enemy) {
                     false
                 ));
                 
-                // 보호막 파괴 시
+                // 보호막 파괴 시 (헬리콥터1과 헬리콥터2 모두 포함)
                 if (enemy.shieldHealth <= 0) {
                     enemy.shieldActive = false;
                     
-                    // 보호막 헬리콥터 파괴 카운터 증가
-                    shieldedHelicopterDestroyed++;
-                    
-                    // 3대 파괴할 때마다 목숨 1개 추가
-                    if (shieldedHelicopterDestroyed % 3 === 0) {
-                        maxLives++;
-                        // 목숨 추가 효과음
-                        safePlaySound('levelup');
-                        // 목숨 추가 메시지 표시
-                        showLifeAddedMessage();
+                    // 보호막 헬리콥터 파괴 카운터 증가 (헬리콥터1과 헬리콥터2 모두)
+                    if (enemy.type === ENEMY_TYPES.HELICOPTER || enemy.type === ENEMY_TYPES.HELICOPTER2) {
+                        shieldedHelicopterDestroyed++;
+                        console.log(`보호막 헬리콥터 파괴됨: ${enemy.type}, 총 파괴 수: ${shieldedHelicopterDestroyed}`);
+                        
+                        // 3대 파괴할 때마다 목숨 1개 추가
+                        if (shieldedHelicopterDestroyed % 3 === 0) {
+                            maxLives++;
+                            // 목숨 추가 효과음
+                            safePlaySound('levelup');
+                            // 목숨 추가 메시지 표시
+                            showLifeAddedMessage();
+                        }
                     }
                     
                     // 보호막 파괴 효과
@@ -2209,6 +2303,10 @@ function checkEnemyCollisions(enemy) {
                     }
                     
                     bossActive = false;
+                    isBossActive = false;
+                    // 보스 파괴 후 다음 보스 생성을 위한 시간 초기화
+                    lastBossSpawnTime = Date.now();
+                    console.log('보스 파괴됨 - 특수 무기, 상태 초기화 완료');
                     return false;
                 }
                 
@@ -2279,6 +2377,10 @@ function checkEnemyCollisions(enemy) {
                     safePlaySound('collision');
                     
                     bossActive = false;
+                    isBossActive = false;
+                    // 보스 파괴 후 다음 보스 생성을 위한 시간 초기화
+                    lastBossSpawnTime = Date.now();
+                    console.log('보스 파괴됨 - 피격 시간 초과, 상태 초기화 완료');
                     return false;
                 }
                 
@@ -2573,7 +2675,7 @@ function drawUI() {
     ctx.textAlign = 'left';
     ctx.fillText(`점수: ${score}`, 20, 40);
     ctx.fillText(`레벨: ${gameLevel} (${getDifficultyName(gameLevel)})`, 20, 70);
-    ctx.fillText(`다음 레벨까지: ${levelUpScore - levelScore}`, 20, 100);
+    ctx.fillText(`다음 레벨까지: ${Math.max(0, levelUpScore - levelScore)}`, 20, 100);
     ctx.fillText(`최고 점수: ${highScore}`, 20, 130);
     ctx.fillText(`최고 점수 리셋: R키`, 20, 160);
     ctx.fillText(`다음 확산탄까지: ${500 - scoreForSpread}점`, 20, 190);
@@ -2597,12 +2699,7 @@ function drawUI() {
         enemy.shieldActive && enemy.shieldHealth > 0
     );
     
-    // 보호막 헬리콥터 파괴 카운터 표시
-    ctx.fillStyle = 'cyan';
-    ctx.font = '18px Arial';
-    ctx.textAlign = 'left';
-    ctx.fillText(`보호막 헬리콥터 파괴: ${shieldedHelicopterDestroyed}대`, 20, 390);
-    ctx.fillText(`다음 목숨 추가까지: ${3 - (shieldedHelicopterDestroyed % 3)}대`, 20, 415);
+    // 보호막 헬리콥터 파괴 카운터 표시 제거됨
     
     // 목숨 추가 메시지 표시
     if (window.lifeAddedMessage && window.lifeAddedMessage.show) {
@@ -2720,10 +2817,49 @@ function drawUI() {
         );
         if (currentPhase >= 0) {
             ctx.fillText(`페이즈 ${currentPhase + 1}`, canvas.width/2, 60);
+            
+            // 현재 패턴 표시
+            const boss = enemies.find(enemy => enemy.isBoss);
+            if (boss && boss.currentPattern) {
+                const patternNames = {
+                    [BOSS_PATTERNS.CIRCLE_SHOT]: '원형 발사',
+                    [BOSS_PATTERNS.CROSS_SHOT]: '십자 발사',
+                    [BOSS_PATTERNS.SPIRAL_SHOT]: '나선형 발사',
+                    [BOSS_PATTERNS.WAVE_SHOT]: '파도형 발사',
+                    [BOSS_PATTERNS.SPREAD_SHOT]: '확산 발사',
+                    [BOSS_PATTERNS.RANDOM_SHOT]: '랜덤 발사',
+                    [BOSS_PATTERNS.TRACKING_SHOT]: '추적 발사',
+                    [BOSS_PATTERNS.BURST_SHOT]: '연발 발사',
+                    [BOSS_PATTERNS.VORTEX_SHOT]: '소용돌이 발사',
+                    [BOSS_PATTERNS.PULSE_SHOT]: '맥박형 발사'
+                };
+                const patternName = patternNames[boss.currentPattern] || '알 수 없음';
+                ctx.fillText(`패턴: ${patternName}`, canvas.width/2, 85);
+            }
         }
+        
+        // 보스 상태 디버깅 정보
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(`보스 상태: ${bossActive ? '활성' : '비활성'}`, 20, 600);
+        ctx.fillText(`isBossActive: ${isBossActive}`, 20, 615);
+        ctx.fillText(`bossDestroyed: ${bossDestroyed}`, 20, 630);
     }
     
-
+    // 보스 생성 조건 디버깅 정보 (보스가 없을 때만 표시)
+    if (!bossActive && !isBossActive) {
+        const currentTime = Date.now();
+        const timeSinceLastBoss = currentTime - lastBossSpawnTime;
+        const bossSpawnScore = Math.max(300, gameLevel * 500);
+        
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(`보스 생성 조건: 점수 ${score}/${bossSpawnScore}, 레벨 ${gameLevel}`, 20, 600);
+        ctx.fillText(`보스 생성 대기: ${Math.ceil((BOSS_SETTINGS.SPAWN_INTERVAL - timeSinceLastBoss) / 1000)}초`, 20, 615);
+        ctx.fillText(`마지막 보스: ${Math.ceil(timeSinceLastBoss / 1000)}초 전`, 20, 630);
+    }
 }
 
 // 게임 시작 이벤트 리스너 수정
@@ -2774,7 +2910,17 @@ window.addEventListener('load', async () => {
 // 난이도 이름 반환 함수
 function getDifficultyName(level) {
     const names = ['초급', '중급', '고급', '전문가', '마스터'];
-    return names[level - 1] || '마스터';
+    if (level <= 5) {
+        return names[level - 1];
+    } else if (level <= 10) {
+        return `전설 ${level - 5}`;
+    } else if (level <= 20) {
+        return `신화 ${level - 10}`;
+    } else if (level <= 50) {
+        return `우주 ${level - 20}`;
+    } else {
+        return `무한 ${level}`;
+    }
 }
 
 // 키 이벤트 리스너 수정
@@ -2978,17 +3124,21 @@ function handleBullets() {
             
             // 꼬리 효과 업데이트
             bullet.trail.unshift({x: bullet.x, y: bullet.y});
-            if (bullet.trail.length > 5) bullet.trail.pop();
+            if (bullet.trail.length > (bullet.trailLength || 5)) bullet.trail.pop();
             
             // 총알 그리기
             ctx.save();
             ctx.translate(bullet.x, bullet.y);
             ctx.rotate(bullet.rotation);
             
+            // 패턴별 색상 및 효과 설정
+            const bulletColor = bullet.color || '#ff0000';
+            const trailLength = bullet.trailLength || 5;
+            
             // 총알 본체
             const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, bullet.width/2);
-            gradient.addColorStop(0, 'rgba(255, 0, 0, 0.8)');
-            gradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+            gradient.addColorStop(0, bulletColor.replace(')', ', 0.8)').replace('rgb', 'rgba'));
+            gradient.addColorStop(1, bulletColor.replace(')', ', 0)').replace('rgb', 'rgba'));
             ctx.fillStyle = gradient;
             ctx.beginPath();
             ctx.arc(0, 0, bullet.width/2, 0, Math.PI * 2);
@@ -2996,22 +3146,36 @@ function handleBullets() {
             
             // 총알 꼬리
             bullet.trail.forEach((pos, index) => {
-                const alpha = 1 - (index / bullet.trail.length);
-                ctx.fillStyle = `rgba(255, 0, 0, ${alpha * 0.5})`;
+                const alpha = 1 - (index / trailLength);
+                const trailColor = bulletColor.replace(')', `, ${alpha * 0.5})`).replace('rgb', 'rgba');
+                ctx.fillStyle = trailColor;
                 ctx.beginPath();
                 ctx.arc(pos.x - bullet.x, pos.y - bullet.y, 
-                        bullet.width/2 * (1 - index/bullet.trail.length), 0, Math.PI * 2);
+                        bullet.width/2 * (1 - index/trailLength), 0, Math.PI * 2);
                 ctx.fill();
             });
             
             // 총알 주변에 빛나는 효과
             const glowGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, bullet.width);
-            glowGradient.addColorStop(0, 'rgba(255, 0, 0, 0.3)');
-            glowGradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+            glowGradient.addColorStop(0, bulletColor.replace(')', ', 0.3)').replace('rgb', 'rgba'));
+            glowGradient.addColorStop(1, bulletColor.replace(')', ', 0)').replace('rgb', 'rgba'));
             ctx.fillStyle = glowGradient;
             ctx.beginPath();
             ctx.arc(0, 0, bullet.width, 0, Math.PI * 2);
             ctx.fill();
+            
+            // 특수 효과 (맥박형 패턴)
+            if (bullet.pattern === BOSS_PATTERNS.PULSE_SHOT) {
+                bullet.pulseTimer += bullet.pulseSpeed || 0.1;
+                const pulseScale = 1 + Math.sin(bullet.pulseTimer) * 0.3;
+                ctx.save();
+                ctx.scale(pulseScale, pulseScale);
+                ctx.fillStyle = bulletColor.replace(')', ', 0.2)').replace('rgb', 'rgba');
+                ctx.beginPath();
+                ctx.arc(0, 0, bullet.width, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
             
             ctx.restore();
             
@@ -3123,8 +3287,8 @@ const BOSS_SETTINGS = {
     DAMAGE: 50,          // 보스 총알 데미지
     SPEED: 2,           // 보스 이동 속도
     BULLET_SPEED: 5,    // 보스 총알 속도
-    PATTERN_INTERVAL: 2500, // 5초에서 2.5초(2500ms)로 단축
-    SPAWN_INTERVAL: 30000,  // 보스 출현 간격 (30초)
+    PATTERN_INTERVAL: 3000, // 3초로 조정하여 연속 발사 방지
+    SPAWN_INTERVAL: 15000,  // 보스 출현 간격 (15초로 단축)
     BONUS_SCORE: 500,    // 보스 처치 보너스 점수를 500으로 설정
     PHASE_THRESHOLDS: [  // 페이즈 전환 체력 임계값
         { health: 2250, speed: 2.5, bulletSpeed: 6 },
@@ -3197,19 +3361,22 @@ function createBoss() {
         randomAngle: Math.random() * Math.PI * 2,
         randomSpeed: Math.random() * 2 + 1,
         lastUpdateTime: currentTime,
+        lastRotorUpdate: currentTime,  // 로터 회전 업데이트 시간 추적
         hitCount: 0,
         totalHitTime: 0,
         lastHitTime: null,
         isBeingHit: false,
         type: ENEMY_TYPES.HELICOPTER,
         rotorAngle: 0,
-        rotorSpeed: 0.2,
+        rotorSpeed: 0.2,  // 헬리콥터1과 동일한 속도로 설정
         hoverHeight: 150,
         hoverTimer: 0,
         hoverDirection: 1,
         canDropBomb: true,
         lastBombDrop: 0,
-        bombDropInterval: 3000
+        bombDropInterval: 3000,
+        currentPattern: null,  // 초기 패턴은 null로 설정 (첫 번째 패턴 실행 시 랜덤 선택)
+        isExecutingPattern: false  // 패턴 실행 중 플래그 초기화
     };
     
     // 보스 추가
@@ -3221,28 +3388,47 @@ function createBoss() {
 function handleBossPattern(boss) {
     const currentTime = Date.now();
     
-    // 보스 페이즈 체크 및 업데이트
+    // 보스 페이즈 체크 및 업데이트 (보스 객체의 체력 사용)
     const currentPhase = BOSS_SETTINGS.PHASE_THRESHOLDS.findIndex(
-        threshold => bossHealth > threshold.health
+        threshold => boss.health > threshold.health
     );
     
-    if (currentPhase !== boss.phase) {
-        boss.phase = currentPhase;
-        if (currentPhase >= 0) {
-            const phaseSettings = BOSS_SETTINGS.PHASE_THRESHOLDS[currentPhase];
-            boss.speed = phaseSettings.speed;
-            boss.bulletSpeed = phaseSettings.bulletSpeed;
+    // 페이즈가 -1인 경우 (체력이 모든 임계값보다 낮은 경우) 3페이즈로 설정
+    const adjustedPhase = currentPhase === -1 ? 3 : currentPhase;
+    
+    console.log('보스 페이즈 체크:', {
+        bossHealth: boss.health,
+        globalBossHealth: bossHealth,
+        currentPhase,
+        adjustedPhase,
+        thresholds: BOSS_SETTINGS.PHASE_THRESHOLDS
+    });
+    
+    if (adjustedPhase !== boss.phase) {
+        boss.phase = adjustedPhase;
+        if (adjustedPhase >= 0) {
+            if (adjustedPhase < BOSS_SETTINGS.PHASE_THRESHOLDS.length) {
+                const phaseSettings = BOSS_SETTINGS.PHASE_THRESHOLDS[adjustedPhase];
+                boss.speed = phaseSettings.speed;
+                boss.bulletSpeed = phaseSettings.bulletSpeed;
+            } else {
+                // 3페이즈 (최종 페이즈)
+                boss.speed = 4;
+                boss.bulletSpeed = 9;
+            }
             
             // 페이즈 변경 시 화면에 메시지 표시
             ctx.fillStyle = 'red';
             ctx.font = 'bold 40px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText(`보스 페이즈 ${currentPhase + 1}!`, canvas.width/2, canvas.height/2);
+            ctx.fillText(`보스 페이즈 ${adjustedPhase + 1}!`, canvas.width/2, canvas.height/2);
         }
     }
     
-    // 로터 회전 업데이트
-    boss.rotorAngle += boss.rotorSpeed;
+    // 로터 회전 업데이트 (부드러운 회전을 위해 deltaTime 적용)
+    const deltaTime = currentTime - (boss.lastRotorUpdate || currentTime);
+    boss.lastRotorUpdate = currentTime;
+    boss.rotorAngle += boss.rotorSpeed * (deltaTime / 16); // 60fps 기준으로 정규화
     
     // 보스 이동 패턴
     if (boss.movePhase === 0) {
@@ -3279,33 +3465,202 @@ function handleBossPattern(boss) {
             createBomb(boss);
         }
         
-        // 공격 패턴
-        if (currentTime - boss.patternTimer >= BOSS_SETTINGS.PATTERN_INTERVAL) {
+        // 공격 패턴 (연속 발사 방지를 위한 추가 체크, 레벨에 따라 간격 조정)
+        const levelAdjustedInterval = Math.max(800, BOSS_SETTINGS.PATTERN_INTERVAL - (gameLevel * 300)); // 레벨당 300ms씩 감소
+        if (currentTime - boss.patternTimer >= levelAdjustedInterval && 
+            !boss.isExecutingPattern) {
             boss.patternTimer = currentTime;
+            boss.isExecutingPattern = true; // 패턴 실행 중 플래그 설정
             
-            // 플레이어 방향으로 발사하는 패턴 추가
-            // if (Math.random() < 0.3) { // 30% 확률로 플레이어 추적 발사
-            //     const targetX = player.x + player.width/2;
-            //     const targetY = player.y + player.height/2;
-            //     const angle = Math.atan2(targetY - (boss.y + boss.height/2), targetX - (boss.x + boss.width/2));
-                
-            //     // 3발의 총알을 약간 다른 각도로 발사
-            //     for (let i = -1; i <= 1; i++) {
-            //         const spreadAngle = angle + (i * 0.2); // 각 총알 사이에 0.2 라디안의 각도 차이
-            //         createBossBullet(boss, spreadAngle);
-            //     }
-            // }
+            // 페이즈에 따라 패턴 선택 (adjustedPhase 사용)
+            let availablePatterns = [];
+            if (boss.phase === 0) {
+                // 1페이즈: 기본 패턴들 (원형 발사 비중 줄임)
+                availablePatterns = [
+                    BOSS_PATTERNS.CROSS_SHOT, BOSS_PATTERNS.SPREAD_SHOT, BOSS_PATTERNS.CIRCLE_SHOT,
+                    BOSS_PATTERNS.CROSS_SHOT, BOSS_PATTERNS.SPREAD_SHOT  // 기본 패턴 가중치 증가
+                ];
+            } else if (boss.phase === 1) {
+                // 2페이즈: 중급 패턴들 추가 (원형 발사 비중 줄임)
+                availablePatterns = [
+                    BOSS_PATTERNS.CROSS_SHOT, BOSS_PATTERNS.SPREAD_SHOT, BOSS_PATTERNS.SPIRAL_SHOT,
+                    BOSS_PATTERNS.RANDOM_SHOT, BOSS_PATTERNS.BURST_SHOT, BOSS_PATTERNS.CIRCLE_SHOT,
+                    BOSS_PATTERNS.CROSS_SHOT, BOSS_PATTERNS.SPREAD_SHOT  // 중급 패턴 가중치 증가
+                ];
+            } else if (boss.phase === 2) {
+                // 3페이즈: 고급 패턴들 추가 (원형 발사 비중 줄임)
+                availablePatterns = [
+                    BOSS_PATTERNS.CROSS_SHOT, BOSS_PATTERNS.SPREAD_SHOT, BOSS_PATTERNS.SPIRAL_SHOT,
+                    BOSS_PATTERNS.RANDOM_SHOT, BOSS_PATTERNS.BURST_SHOT, BOSS_PATTERNS.WAVE_SHOT,
+                    BOSS_PATTERNS.TRACKING_SHOT, BOSS_PATTERNS.VORTEX_SHOT, BOSS_PATTERNS.CIRCLE_SHOT,
+                    BOSS_PATTERNS.CROSS_SHOT, BOSS_PATTERNS.SPREAD_SHOT  // 고급 패턴 가중치 증가
+                ];
+            } else {
+                // 4페이즈 (최종): 모든 패턴 사용 (원형 발사 비중 줄임)
+                availablePatterns = [
+                    BOSS_PATTERNS.CROSS_SHOT, BOSS_PATTERNS.SPREAD_SHOT, BOSS_PATTERNS.SPIRAL_SHOT,
+                    BOSS_PATTERNS.RANDOM_SHOT, BOSS_PATTERNS.BURST_SHOT, BOSS_PATTERNS.WAVE_SHOT,
+                    BOSS_PATTERNS.TRACKING_SHOT, BOSS_PATTERNS.VORTEX_SHOT, BOSS_PATTERNS.PULSE_SHOT,
+                    BOSS_PATTERNS.CIRCLE_SHOT  // 원형 발사를 마지막에 배치하여 비중 감소
+                ];
+            }
+            
+            console.log('보스 패턴 선택 전:', {
+                bossPhase: boss.phase,
+                adjustedPhase: adjustedPhase,
+                availablePatterns,
+                bossHealth: boss.health,
+                boss: boss
+            });
+            
+            // 랜덤 패턴 선택
+            const selectedPattern = availablePatterns[Math.floor(Math.random() * availablePatterns.length)];
+            console.log(`보스 패턴 선택됨: ${selectedPattern}`, {
+                bossPhase: boss.phase,
+                adjustedPhase: adjustedPhase,
+                availablePatterns,
+                selectedPattern
+            });
+            executeBossPattern(boss, selectedPattern);
+            
+            // 패턴 실행 완료 후 플래그 해제 (지연 시간 추가)
+            setTimeout(() => {
+                boss.isExecutingPattern = false;
+            }, 500); // 0.5초 후 플래그 해제
         }
     }
 }
 
+// 보스 패턴 실행 함수
+function executeBossPattern(boss, pattern) {
+    const bossX = boss.x + boss.width/2;
+    const bossY = boss.y + boss.height/2;
+    
+    // 현재 패턴을 보스 객체에 저장
+    boss.currentPattern = pattern;
+    
+    // 디버깅 로그 추가
+    console.log(`보스 패턴 실행 시작: ${pattern}`, {
+        bossPhase: boss.phase,
+        bossHealth: boss.health,
+        bossX: boss.x,
+        bossY: boss.y,
+        pattern: pattern
+    });
+    
+    switch(pattern) {
+        case BOSS_PATTERNS.CIRCLE_SHOT:
+            // 원형 발사 - 360도 방향으로 총알 발사
+            console.log('원형 발사 패턴 실행 - 24발 발사');
+            for (let i = 0; i < 360; i += 15) { // 15도 간격으로 24발
+                const angle = (i * Math.PI) / 180;
+                createBossBullet(boss, angle, pattern);
+            }
+            break;
+            
+        case BOSS_PATTERNS.CROSS_SHOT:
+            // 십자 발사 - 4방향으로 총알 발사
+            console.log('십자 발사 패턴 실행 - 4발 발사');
+            for (let i = 0; i < 4; i++) {
+                const angle = (i * Math.PI) / 2;
+                createBossBullet(boss, angle, pattern);
+            }
+            break;
+            
+        case BOSS_PATTERNS.SPIRAL_SHOT:
+            // 나선형 발사 - 회전하면서 총알 발사
+            for (let i = 0; i < 8; i++) {
+                const angle = (i * Math.PI / 4) + (boss.rotorAngle || 0);
+                createBossBullet(boss, angle, pattern);
+            }
+            break;
+            
+        case BOSS_PATTERNS.WAVE_SHOT:
+            // 파도형 발사 - 사인파 형태로 총알 발사
+            for (let i = 0; i < 12; i++) {
+                const baseAngle = (i * Math.PI / 6);
+                const waveOffset = Math.sin(i * 0.5) * 0.3;
+                const angle = baseAngle + waveOffset;
+                createBossBullet(boss, angle, pattern);
+            }
+            break;
+            
+        case BOSS_PATTERNS.SPREAD_SHOT:
+            // 확산 발사 - 플레이어 방향 기준으로 확산
+            console.log('확산 발사 패턴 실행 - 7발 발사');
+            const playerAngle = Math.atan2(player.y - bossY, player.x - bossX);
+            for (let i = -3; i <= 3; i++) {
+                const angle = playerAngle + (i * 0.3);
+                createBossBullet(boss, angle, pattern);
+            }
+            break;
+            
+        case BOSS_PATTERNS.RANDOM_SHOT:
+            // 랜덤 발사 - 랜덤한 방향으로 총알 발사
+            for (let i = 0; i < 10; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                createBossBullet(boss, angle, pattern);
+            }
+            break;
+            
+        case BOSS_PATTERNS.TRACKING_SHOT:
+            // 추적 발사 - 플레이어 방향으로 정확히 발사
+            const targetAngle = Math.atan2(player.y - bossY, player.x - bossX);
+            for (let i = -2; i <= 2; i++) {
+                const angle = targetAngle + (i * 0.2);
+                createBossBullet(boss, angle, pattern);
+            }
+            break;
+            
+        case BOSS_PATTERNS.BURST_SHOT:
+            // 연발 발사 - 빠른 속도로 연속 발사
+            for (let i = 0; i < 6; i++) {
+                setTimeout(() => {
+                    const angle = Math.random() * Math.PI * 2;
+                    createBossBullet(boss, angle, pattern);
+                }, i * 100); // 100ms 간격으로 연속 발사
+            }
+            break;
+            
+        case BOSS_PATTERNS.VORTEX_SHOT:
+            // 소용돌이 발사 - 나선형으로 회전하면서 발사
+            for (let i = 0; i < 16; i++) {
+                const angle = (i * Math.PI / 8) + (boss.rotorAngle || 0) * 2;
+                createBossBullet(boss, angle, pattern);
+            }
+            break;
+            
+        case BOSS_PATTERNS.PULSE_SHOT:
+            // 맥박형 발사 - 맥박처럼 강약을 달리하며 발사
+            for (let i = 0; i < 8; i++) {
+                const angle = (i * Math.PI / 4);
+                const bullet = createBossBullet(boss, angle, pattern);
+                if (bullet) {
+                    // 맥박형 총알은 크기와 속도가 다름 (기존 크기 기준으로 조정)
+                    bullet.width = 6 + (i % 2) * 4; // 6 또는 10
+                    bullet.height = 6 + (i % 2) * 4;
+                    bullet.speed = boss.bulletSpeed + (i % 2) * 2; // 기본 속도 또는 +2
+                }
+            }
+            break;
+            
+        default:
+            // 기본 원형 발사
+            for (let i = 0; i < 8; i++) {
+                const angle = (i * Math.PI) / 4;
+                createBossBullet(boss, angle, pattern);
+            }
+            break;
+    }
+}
+
 // 보스 총알 생성 함수 수정
-function createBossBullet(boss, angle) {
+function createBossBullet(boss, angle, pattern = null) {
     const bullet = {
         x: boss.x + boss.width/2,
         y: boss.y + boss.height/2,
-        width: 12,
-        height: 12,
+        width: 8,  // 기존 크기로 복구
+        height: 8, // 기존 크기로 복구
         speed: boss.bulletSpeed,
         angle: angle,
         isBossBullet: true,
@@ -3314,14 +3669,73 @@ function createBossBullet(boss, angle) {
         trail: [], // 총알 꼬리 효과를 위한 배열
         glow: 1, // 빛나는 효과를 위한 값
         rotation: 0, // 회전 효과를 위한 값
-        rotationSpeed: 0.1 // 회전 속도
+        rotationSpeed: 0.1, // 회전 속도
+        pattern: pattern, // 패턴 정보 추가
+        life: 100, // 총알 수명
+        pulseTimer: 0, // 맥박 효과를 위한 타이머
+        pulseSpeed: 0.1 // 맥박 속도
     };
+    
+    // 패턴별 특별한 속성 설정
+    if (pattern) {
+        console.log(`보스 총알 생성 - 패턴: ${pattern}`);
+        switch(pattern) {
+            case BOSS_PATTERNS.CIRCLE_SHOT:
+                bullet.color = '#ff0000'; // 빨간색
+                bullet.trailLength = 8;
+                break;
+            case BOSS_PATTERNS.CROSS_SHOT:
+                bullet.color = '#00ff00'; // 초록색
+                bullet.trailLength = 6;
+                break;
+            case BOSS_PATTERNS.SPIRAL_SHOT:
+                bullet.color = '#0000ff'; // 파란색
+                bullet.trailLength = 10;
+                bullet.rotationSpeed = 0.2;
+                break;
+            case BOSS_PATTERNS.WAVE_SHOT:
+                bullet.color = '#ffff00'; // 노란색
+                bullet.trailLength = 7;
+                break;
+            case BOSS_PATTERNS.SPREAD_SHOT:
+                bullet.color = '#ff00ff'; // 마젠타
+                bullet.trailLength = 5;
+                break;
+            case BOSS_PATTERNS.RANDOM_SHOT:
+                bullet.color = '#00ffff'; // 시안
+                bullet.trailLength = 4;
+                break;
+            case BOSS_PATTERNS.TRACKING_SHOT:
+                bullet.color = '#ff8800'; // 주황색
+                bullet.trailLength = 9;
+                break;
+            case BOSS_PATTERNS.BURST_SHOT:
+                bullet.color = '#8800ff'; // 보라색
+                bullet.trailLength = 3;
+                break;
+            case BOSS_PATTERNS.VORTEX_SHOT:
+                bullet.color = '#ff0088'; // 핑크
+                bullet.trailLength = 12;
+                bullet.rotationSpeed = 0.3;
+                break;
+            case BOSS_PATTERNS.PULSE_SHOT:
+                bullet.color = '#88ff00'; // 라임
+                bullet.trailLength = 6;
+                break;
+            default:
+                bullet.color = '#ffffff'; // 기본 흰색
+                bullet.trailLength = 5;
+                break;
+        }
+    }
+    
     bullets.push(bullet);
+    return bullet; // 총알 객체 반환하여 추가 속성 설정 가능
 }
 
 // 레벨업 체크
 function checkLevelUp() {
-    if (levelScore >= levelUpScore && gameLevel < 5) {
+    if (levelScore >= levelUpScore) {
         safePlaySound('levelup');
         gameLevel++;
         levelScore = 0;
@@ -3783,6 +4197,22 @@ const ENEMY_TYPES = {
 
 // 헬리콥터 생성 함수 수정
 function createHelicopter() {
+    // 보호막 헬리콥터(헬리콥터1 + 헬리콥터2)가 화면에 4대 이상 있으면 생성하지 않음
+    const currentShieldedHelicopters = enemies.filter(enemy => 
+        (enemy.type === ENEMY_TYPES.HELICOPTER || enemy.type === ENEMY_TYPES.HELICOPTER2) && 
+        enemy.shieldActive
+    ).length;
+    
+    if (currentShieldedHelicopters >= 4) {
+        console.log('보호막 헬리콥터가 이미 4대 있어서 헬리콥터1 생성하지 않음', {
+            current: currentShieldedHelicopters,
+            max: 4,
+            helicopter1: enemies.filter(enemy => enemy.type === ENEMY_TYPES.HELICOPTER),
+            helicopter2: enemies.filter(enemy => enemy.type === ENEMY_TYPES.HELICOPTER2)
+        });
+        return null; // 헬리콥터 생성 중단
+    }
+    
     const helicopter = {
         x: Math.random() * (canvas.width - 48), // 40 * 1.2 = 48
         y: -48,  // 화면 상단에서 시작
@@ -3791,15 +4221,26 @@ function createHelicopter() {
         speed: 2,
         type: ENEMY_TYPES.HELICOPTER,
         rotorAngle: 0,
-        rotorSpeed: 0.2,
+        rotorSpeed: 0.2,  // 기본 헬리콥터 회전 속도
         hoverHeight: Math.random() * 200 + 100,
         hoverTimer: 0,
         hoverDirection: 1,
         canDropBomb: Math.random() < 0.4,  // 40% 확률로 폭탄 투하 가능
         lastBombDrop: 0,
-        bombDropInterval: 2000 + Math.random() * 3000
+        bombDropInterval: 2000 + Math.random() * 3000,
+        // 보호막 시스템 추가 (헬리콥터1도 보호막을 가짐)
+        shieldHealth: 8,  // 보호막 체력 (헬리콥터2보다 약함)
+        maxShieldHealth: 8,
+        shieldActive: true,
+        shieldRadius: 50,  // 보호막 반지름
+        shieldAngle: 0,    // 보호막 회전 각도
+        shieldRotationSpeed: 0.02,  // 보호막 회전 속도
+        hitEffectTimer: 0,  // 피격 효과 타이머
+        hitEffectDuration: 200  // 피격 효과 지속 시간
     };
-    enemies.push(helicopter);
+    
+    console.log('헬리콥터1 생성됨:', helicopter);
+    return helicopter;
 }
 
 // 헬리콥터 그리기 함수 수정
@@ -3925,11 +4366,17 @@ function drawHelicopter(x, y, width, height, rotorAngle) {
 
     // 1. 메인 로터 (세로로 길게, 끝에 흰색 포인트, 투명도 효과)
     ctx.save();
-    // 로터 회전 적용
-    ctx.rotate(rotorAngle);
-    for (let i = 0; i < 2; i++) {
+    // 로터 회전 적용 (보스는 더 부드러운 회전)
+    const rotorRotationAngle = isBoss ? rotorAngle * 0.8 : rotorAngle; // 보스는 회전 속도 조절
+    ctx.rotate(rotorRotationAngle);
+    
+    // 보스는 더 많은 블레이드, 일반 헬리콥터는 기본 블레이드
+    const bladeCount = isBoss ? 4 : 2;
+    const bladeAngle = (Math.PI * 2) / bladeCount;
+    
+    for (let i = 0; i < bladeCount; i++) {
         ctx.save();
-        ctx.rotate(i * Math.PI/2);
+        ctx.rotate(i * bladeAngle);
         // 블레이드(투명도 효과)
         ctx.beginPath();
         ctx.moveTo(0, -height*0.55);
@@ -3937,7 +4384,7 @@ function drawHelicopter(x, y, width, height, rotorAngle) {
         ctx.lineWidth = width*0.10;
         ctx.strokeStyle = isBoss ? 'rgba(255,69,0,0.55)' : isHelicopter2 ? 'rgba(255,140,0,0.55)' : 'rgba(32,178,170,0.55)';
         ctx.shadowColor = isBoss ? 'rgba(255,140,0,0.3)' : isHelicopter2 ? 'rgba(255,165,0,0.3)' : 'rgba(0,139,139,0.3)';
-        ctx.shadowBlur = 8;
+        ctx.shadowBlur = isBoss ? 12 : 8; // 보스는 더 강한 그림자 효과
         ctx.stroke();
         ctx.shadowBlur = 0;
         // 블레이드 끝 강조
@@ -4258,14 +4705,42 @@ let isBossActive = false; // 보스 활성화 상태 추적
 
 function handleEnemies() {
     const currentTime = Date.now();
-    const currentDifficulty = difficultySettings[gameLevel];
+    
+    // 레벨이 difficultySettings 범위를 벗어난 경우 기본값 사용
+    let currentDifficulty;
+    if (gameLevel <= 5 && difficultySettings[gameLevel]) {
+        currentDifficulty = difficultySettings[gameLevel];
+    } else {
+        // 레벨 5 이후에는 점진적으로 증가하는 난이도 적용
+        const baseLevel = 5;
+        const levelMultiplier = 1 + (gameLevel - baseLevel) * 0.2; // 레벨당 20% 증가
+        
+        currentDifficulty = {
+            enemySpeed: difficultySettings[baseLevel].enemySpeed * levelMultiplier,
+            enemySpawnRate: Math.min(0.9, difficultySettings[baseLevel].enemySpawnRate * levelMultiplier),
+            maxEnemies: Math.min(15, difficultySettings[baseLevel].maxEnemies + Math.floor((gameLevel - baseLevel) / 2)),
+            enemyHealth: Math.floor(difficultySettings[baseLevel].enemyHealth * levelMultiplier),
+            patternChance: Math.min(0.9, difficultySettings[baseLevel].patternChance * levelMultiplier),
+            fireInterval: Math.max(500, difficultySettings[baseLevel].fireInterval / levelMultiplier),
+            bombDropChance: Math.min(0.8, difficultySettings[baseLevel].bombDropChance * levelMultiplier),
+            bulletSpeed: difficultySettings[baseLevel].enemySpeed * levelMultiplier,
+            specialPatternChance: Math.min(0.8, difficultySettings[baseLevel].specialPatternChance * levelMultiplier)
+        };
+    }
+    
+    // 안전장치: currentDifficulty가 undefined인 경우 기본값 사용
+    if (!currentDifficulty) {
+        console.warn(`레벨 ${gameLevel}에 대한 난이도 설정을 찾을 수 없음, 기본값 사용`);
+        currentDifficulty = difficultySettings[1];
+    }
+    
     const bossExists = enemies.some(enemy => enemy.type === 'helicopter' && enemy.isBoss);
     
-    // 보스 생성 조건 추가
-    if (score >= 5000 * gameLevel && !isBossActive && !bossExists) {
-        createBoss();
-        isBossActive = true;
-    }
+    // 보스 생성은 gameLoop에서만 처리하도록 주석 처리
+    // if (score >= 1000 && !isBossActive && !bossExists) {
+    //     createBoss();
+    //     isBossActive = true;
+    // }
     
     if (bossExists) {
         isBossActive = true;
@@ -4290,6 +4765,9 @@ function handleEnemies() {
             if (helicopter) {
                 enemies.push(helicopter);
                 lastHelicopterSpawnTime = currentTime;
+                console.log('헬리콥터1이 enemies 배열에 추가됨');
+            } else {
+                console.log('헬리콥터1 생성 실패 - 보호막 헬리콥터 제한에 도달');
             }
         }
     }
@@ -4304,86 +4782,7 @@ function handleEnemies() {
     handleHelicopterBullets();
 }
 
-// 보스 생성 함수 수정
-function createBoss() {
-    safePlaySound('explosion');
-    console.log('보스 헬리콥터 생성 함수 호출됨');
-    
-    // 이미 보스가 존재하는 경우
-    if (bossActive) {
-        console.log('보스가 이미 존재하여 생성하지 않음');
-        return;
-    }
-    
-    const currentTime = Date.now();
-    const timeSinceLastBoss = currentTime - lastBossSpawnTime;
-    
-    // 시간 체크
-    if (timeSinceLastBoss < BOSS_SETTINGS.SPAWN_INTERVAL) {
-        console.log('보스 생성 시간이 되지 않음:', {
-            timeSinceLastBoss,
-            requiredInterval: BOSS_SETTINGS.SPAWN_INTERVAL,
-            remainingTime: BOSS_SETTINGS.SPAWN_INTERVAL - timeSinceLastBoss
-        });
-        return;
-    }
-    
-    console.log('보스 헬리콥터 생성 시작:', {
-        currentTime,
-        lastBossSpawnTime,
-        timeSinceLastBoss
-    });
-    
-    // 보스 상태 초기화
-    bossActive = true;
-    isBossActive = true; // 보스 활성화 상태 설정
-    bossHealth = BOSS_SETTINGS.HEALTH;
-    bossPattern = 0;
-    bossTimer = currentTime;
-    lastBossSpawnTime = currentTime;
-    bossDestroyed = false;
-    
-    // 보스 헬리콥터 객체 생성
-    const boss = {
-        x: Math.random() * (canvas.width - 68),
-        y: -68,  // 화면 상단에서 시작
-        width: 68,
-        height: 68,
-        speed: BOSS_SETTINGS.SPEED,
-        pattern: BOSS_PATTERNS.CIRCLE_SHOT,
-        angle: 0,
-        movePhase: 0,
-        targetX: canvas.width / 2 - 34,
-        targetY: 68,
-        phase: 0,
-        patternTimer: currentTime,
-        bulletSpeed: BOSS_SETTINGS.BULLET_SPEED,
-        isBoss: true,
-        health: BOSS_SETTINGS.HEALTH,
-        randomOffsetX: Math.random() * 120 - 60,
-        randomOffsetY: Math.random() * 120 - 60,
-        randomAngle: Math.random() * Math.PI * 2,
-        randomSpeed: Math.random() * 2 + 1,
-        lastUpdateTime: currentTime,
-        hitCount: 0,
-        totalHitTime: 0,
-        lastHitTime: null,
-        isBeingHit: false,
-        type: ENEMY_TYPES.HELICOPTER,
-        rotorAngle: 0,
-        rotorSpeed: 0.2,
-        hoverHeight: 150,
-        hoverTimer: 0,
-        hoverDirection: 1,
-        canDropBomb: true,
-        lastBombDrop: 0,
-        bombDropInterval: 3000
-    };
-    
-    // 보스 추가
-    enemies.push(boss);
-    console.log('보스 헬리콥터 생성 완료:', boss);
-}
+// 중복된 createBoss 함수 제거 - 첫 번째 함수만 사용
 
 // 보스 파괴 시 처리
 function handleBossDestruction() {
@@ -4470,17 +4869,7 @@ function bossFireSpreadShot(boss) {
     }
 }
 
-function handleBossPattern(boss) {
-    const currentTime = Date.now();
-
-    // ... (기존 페이즈, 이동 등 유지)
-
-    // 공격 패턴: 확산탄만 발사
-    if (currentTime - boss.patternTimer >= BOSS_SETTINGS.PATTERN_INTERVAL) {
-        boss.patternTimer = currentTime;
-        bossFireSpreadShot(boss); // 확산탄만 발사
-    }
-}
+// 중복된 handleBossPattern 함수 제거 - 첫 번째 함수만 사용
 
 // 충돌 이펙트 배열 추가
 let collisionEffects = [];
