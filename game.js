@@ -2243,8 +2243,8 @@ function checkEnemyCollisions(enemy) {
                             maxLives++;
                             // 목숨 추가 효과음
                             safePlaySound('levelup');
-                            // 목숨 추가 메시지 표시
-                            showLifeAddedMessage();
+                            // 목숨 추가 메시지 표시 비활성화
+                            // showLifeAddedMessage();
                         }
                     }
                     
@@ -4370,8 +4370,8 @@ function drawHelicopter(x, y, width, height, rotorAngle) {
     const rotorRotationAngle = isBoss ? rotorAngle * 0.8 : rotorAngle; // 보스는 회전 속도 조절
     ctx.rotate(rotorRotationAngle);
     
-    // 보스는 더 많은 블레이드, 일반 헬리콥터는 기본 블레이드
-    const bladeCount = isBoss ? 4 : 2;
+    // 보스와 일반 헬리콥터 모두 4개 블레이드
+    const bladeCount = 4;
     const bladeAngle = (Math.PI * 2) / bladeCount;
     
     // 회전 잔상 효과 (3단계)
