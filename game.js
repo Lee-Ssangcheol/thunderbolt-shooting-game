@@ -4364,7 +4364,7 @@ function drawHelicopter(x, y, width, height, rotorAngle) {
         ctx.restore();
     }
 
-    // 1. 메인 로터 (세로로 길게, 끝에 흰색 포인트, 투명도 효과)
+    // 1. 메인 로터 (세로로 길게, 끝에 흰색 포인트, 투명도 효과 + 회전 잔상)
     ctx.save();
     // 로터 회전 적용 (보스는 더 부드러운 회전)
     const rotorRotationAngle = isBoss ? rotorAngle * 0.8 : rotorAngle; // 보스는 회전 속도 조절
@@ -4374,36 +4374,58 @@ function drawHelicopter(x, y, width, height, rotorAngle) {
     const bladeCount = isBoss ? 4 : 2;
     const bladeAngle = (Math.PI * 2) / bladeCount;
     
-    for (let i = 0; i < bladeCount; i++) {
-        ctx.save();
-        ctx.rotate(i * bladeAngle);
-        // 블레이드(투명도 효과)
-        ctx.beginPath();
-        ctx.moveTo(0, -height*0.55);
-        ctx.lineTo(0, height*0.55);
-        ctx.lineWidth = width*0.10;
-        ctx.strokeStyle = isBoss ? 'rgba(255,69,0,0.55)' : isHelicopter2 ? 'rgba(255,140,0,0.55)' : 'rgba(32,178,170,0.55)';
-        ctx.shadowColor = isBoss ? 'rgba(255,140,0,0.3)' : isHelicopter2 ? 'rgba(255,165,0,0.3)' : 'rgba(0,139,139,0.3)';
-        ctx.shadowBlur = isBoss ? 12 : 8; // 보스는 더 강한 그림자 효과
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-        // 블레이드 끝 강조
-        ctx.beginPath();
-        ctx.arc(0, height*0.55, width*0.05, 0, Math.PI*2);
-        ctx.arc(0, -height*0.55, width*0.05, 0, Math.PI*2);
-        ctx.fillStyle = isBoss ? '#ff8c00' : isHelicopter2 ? '#FFA500' : '#008B8B';
-        ctx.globalAlpha = 0.7;
-        ctx.fill();
-        ctx.globalAlpha = 1.0;
-        // 블레이드 끝 흰색 포인트
-        ctx.beginPath();
-        ctx.arc(0, height*0.55, width*0.022, 0, Math.PI*2);
-        ctx.arc(0, -height*0.55, width*0.022, 0, Math.PI*2);
-        ctx.fillStyle = isBoss ? '#ffd700' : isHelicopter2 ? '#9ACD32' : '#20B2AA';
-        ctx.globalAlpha = 0.95;
-        ctx.fill();
-        ctx.globalAlpha = 1.0;
-        ctx.restore();
+    // 회전 잔상 효과 (3단계)
+    const ghostCount = 3;
+    for (let ghost = 0; ghost < ghostCount; ghost++) {
+        const ghostAlpha = (ghostCount - ghost) / ghostCount * 0.3; // 잔상 투명도
+        const ghostOffset = ghost * 0.1; // 잔상 회전 오프셋
+        
+        for (let i = 0; i < bladeCount; i++) {
+            ctx.save();
+            ctx.rotate(i * bladeAngle + ghostOffset);
+            // 블레이드(투명도 효과 + 잔상)
+            ctx.beginPath();
+            ctx.moveTo(0, -height*0.55);
+            ctx.lineTo(0, height*0.55);
+            ctx.lineWidth = width*0.10;
+            
+            // 잔상별 색상 및 투명도 조정
+            let ghostColor;
+            if (isBoss) {
+                ghostColor = `rgba(255,69,0,${ghostAlpha})`;
+            } else if (isHelicopter2) {
+                ghostColor = `rgba(255,140,0,${ghostAlpha})`;
+            } else {
+                ghostColor = `rgba(32,178,170,${ghostAlpha})`;
+            }
+            
+            ctx.strokeStyle = ghostColor;
+            ctx.shadowColor = isBoss ? 'rgba(255,140,0,0.3)' : isHelicopter2 ? 'rgba(255,165,0,0.3)' : 'rgba(0,139,139,0.3)';
+            ctx.shadowBlur = isBoss ? 12 : 8; // 보스는 더 강한 그림자 효과
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            
+            // 잔상에는 블레이드 끝 강조와 포인트는 그리지 않음 (성능 최적화)
+            if (ghost === 0) { // 메인 블레이드에만 추가 효과
+                // 블레이드 끝 강조
+                ctx.beginPath();
+                ctx.arc(0, height*0.55, width*0.05, 0, Math.PI*2);
+                ctx.arc(0, -height*0.55, width*0.05, 0, Math.PI*2);
+                ctx.fillStyle = isBoss ? '#ff8c00' : isHelicopter2 ? '#FFA500' : '#008B8B';
+                ctx.globalAlpha = 0.7;
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+                // 블레이드 끝 흰색 포인트
+                ctx.beginPath();
+                ctx.arc(0, height*0.55, width*0.022, 0, Math.PI*2);
+                ctx.arc(0, -height*0.55, width*0.022, 0, Math.PI*2);
+                ctx.fillStyle = isBoss ? '#ffd700' : isHelicopter2 ? '#9ACD32' : '#20B2AA';
+                ctx.globalAlpha = 0.95;
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+            ctx.restore();
+        }
     }
     ctx.restore();
 
