@@ -249,6 +249,7 @@ let enemySpawnRate = 2000;  // 적 생성 주기 (ms)
 let enemySpeed = 2;  // 적 이동 속도
 let lastCollisionTime = 0;  // 마지막 충돌 시간
 let collisionSoundCooldown = 300;  // 충돌음 쿨다운 시간
+let shieldedHelicopterDestroyed = 0;  // 보호막 헬리콥터 파괴 카운터
 
 // 보스 패턴 상수 추가
 const BOSS_PATTERNS = {
@@ -774,6 +775,7 @@ async function initializeGame() {
         
         collisionCount = 0;
         maxLives = 5;  // 최대 목숨 초기화
+        shieldedHelicopterDestroyed = 0;  // 보호막 헬리콥터 파괴 카운터 초기화
         isGameOver = false;
         isPaused = false;
         flashTimer = 0;
@@ -838,8 +840,14 @@ function restartGame() {
     // 게임 상태 초기화
     collisionCount = 0;
     maxLives = 5;  // 최대 목숨 초기화
+    shieldedHelicopterDestroyed = 0;  // 보호막 헬리콥터 파괴 카운터 초기화
     isGameOver = false;
     hasSecondPlane = false;
+    
+    // 목숨 추가 메시지 초기화
+    if (window.lifeAddedMessage) {
+        window.lifeAddedMessage.show = false;
+    }
     
     // 모든 투사체 및 폭발물 완전 초기화
     enemies = [];
@@ -1526,6 +1534,21 @@ function checkCollision(rect1, rect2) {
            rect1.y + rect1.height > rect2.y;
 }
 
+// 목숨 추가 메시지 표시 함수
+function showLifeAddedMessage() {
+    // 메시지 표시를 위한 상태 변수 추가
+    if (!window.lifeAddedMessage) {
+        window.lifeAddedMessage = {
+            show: false,
+            startTime: 0,
+            duration: 3000  // 3초간 표시
+        };
+    }
+    
+    window.lifeAddedMessage.show = true;
+    window.lifeAddedMessage.startTime = Date.now();
+}
+
 // 충돌 처리 함수 수정
 function handleCollision() {
     // 상단 효과 무시 영역 체크
@@ -2118,6 +2141,19 @@ function checkEnemyCollisions(enemy) {
                 // 보호막 파괴 시
                 if (enemy.shieldHealth <= 0) {
                     enemy.shieldActive = false;
+                    
+                    // 보호막 헬리콥터 파괴 카운터 증가
+                    shieldedHelicopterDestroyed++;
+                    
+                    // 3대 파괴할 때마다 목숨 1개 추가
+                    if (shieldedHelicopterDestroyed % 3 === 0) {
+                        maxLives++;
+                        // 목숨 추가 효과음
+                        safePlaySound('levelup');
+                        // 목숨 추가 메시지 표시
+                        showLifeAddedMessage();
+                    }
+                    
                     // 보호막 파괴 효과
                     explosions.push(new Explosion(
                         enemy.x + enemy.width/2,
@@ -2561,7 +2597,43 @@ function drawUI() {
         enemy.shieldActive && enemy.shieldHealth > 0
     );
     
-
+    // 보호막 헬리콥터 파괴 카운터 표시
+    ctx.fillStyle = 'cyan';
+    ctx.font = '18px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(`보호막 헬리콥터 파괴: ${shieldedHelicopterDestroyed}대`, 20, 390);
+    ctx.fillText(`다음 목숨까지: ${3 - (shieldedHelicopterDestroyed % 3)}대`, 20, 415);
+    
+    // 목숨 추가 메시지 표시
+    if (window.lifeAddedMessage && window.lifeAddedMessage.show) {
+        const currentTime = Date.now();
+        const elapsed = currentTime - window.lifeAddedMessage.startTime;
+        
+        if (elapsed < window.lifeAddedMessage.duration) {
+            // 메시지 페이드 아웃 효과
+            const alpha = 1 - (elapsed / window.lifeAddedMessage.duration);
+            
+            // 메시지 배경
+            ctx.fillStyle = `rgba(0, 255, 0, ${alpha * 0.3})`;
+            ctx.fillRect(canvas.width/2 - 150, canvas.height/2 - 30, 300, 60);
+            
+            // 메시지 테두리
+            ctx.strokeStyle = `rgba(0, 255, 0, ${alpha})`;
+            ctx.lineWidth = 3;
+            ctx.strokeRect(canvas.width/2 - 150, canvas.height/2 - 30, 300, 60);
+            
+            // 메시지 텍스트
+            ctx.fillStyle = `rgba(0, 255, 0, ${alpha})`;
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('목숨 1개 추가!', canvas.width/2, canvas.height/2 + 5);
+            ctx.font = 'bold 18px Arial';
+            ctx.fillText(`보호막 헬리콥터 ${shieldedHelicopterDestroyed}대 파괴`, canvas.width/2, canvas.height/2 + 30);
+        } else {
+            // 메시지 표시 시간이 지나면 숨김
+            window.lifeAddedMessage.show = false;
+        }
+    }
 
     // 제작자 정보 표시
     ctx.fillStyle = 'white';
