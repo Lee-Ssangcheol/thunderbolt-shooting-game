@@ -2602,7 +2602,7 @@ function drawUI() {
     ctx.font = '18px Arial';
     ctx.textAlign = 'left';
     ctx.fillText(`보호막 헬리콥터 파괴: ${shieldedHelicopterDestroyed}대`, 20, 390);
-    ctx.fillText(`다음 목숨까지: ${3 - (shieldedHelicopterDestroyed % 3)}대`, 20, 415);
+    ctx.fillText(`다음 목숨 추가까지: ${3 - (shieldedHelicopterDestroyed % 3)}대`, 20, 415);
     
     // 목숨 추가 메시지 표시
     if (window.lifeAddedMessage && window.lifeAddedMessage.show) {
