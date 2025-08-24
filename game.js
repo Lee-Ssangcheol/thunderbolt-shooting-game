@@ -1105,6 +1105,7 @@ function createEnemy() {
         bombCount: 3,
         bulletCount: 3,
         bulletSpeed: currentDifficulty.bulletSpeed,
+        // 미사일 관련 속성 제거
         chaoticTimer: 0,
         bounceHeight: Math.random() * 100 + 50,
         bounceSpeed: Math.random() * 0.05 + 0.02,
@@ -1144,12 +1145,15 @@ function getRandomSpecialAbility() {
 // 적 비행기 총알 배열 추가
 let enemyBullets = [];
 
-// 적 비행기 총알 발사 및 이동 처리 함수 추가
+// 적 비행기 총알 발사 및 이동 처리 함수 추가 (노란색 직사각형으로 그리기)
 function handleEnemyBullets() {
     enemyBullets = enemyBullets.filter(bullet => {
         bullet.y += bullet.speed;
-        ctx.fillStyle = 'yellow';  // 빨간색에서 노란색으로 변경
+        
+        // 모든 적 총알을 노란색 직사각형으로 그리기
+        ctx.fillStyle = 'yellow';
         ctx.fillRect(bullet.x - bullet.width/2, bullet.y - bullet.height/2, bullet.width, bullet.height);
+        
         // 플레이어와 충돌 체크
         if (checkCollision(bullet, player) || (hasSecondPlane && checkCollision(bullet, secondPlane))) {
             handleCollision();
@@ -1257,13 +1261,15 @@ function handleEnemyPlaneBullets() {
     });
 }
 
-// 적 비행기 총알 발사 함수
+// 적 비행기 총알 발사 함수 (미사일 모양으로 2발씩 발사)
 function fireEnemyBullet(enemy) {
     // 랜덤으로 총알 또는 폭탄 발사 결정
     if (Math.random() < 0.7) {  // 70% 확률로 총알 발사
         const leftX = enemy.x + enemy.width * 0.18;
         const rightX = enemy.x + enemy.width * 0.82;
         const bulletY = enemy.y + enemy.height;
+        
+        // 왼쪽 총알 (노란색 직사각형)
         enemyBullets.push({
             x: leftX,
             y: bulletY,
@@ -1271,6 +1277,8 @@ function fireEnemyBullet(enemy) {
             height: 18,
             speed: enemy.bulletSpeed
         });
+        
+        // 오른쪽 총알 (노란색 직사각형)
         enemyBullets.push({
             x: rightX,
             y: bulletY,
@@ -1285,74 +1293,15 @@ function fireEnemyBullet(enemy) {
     }
 }
 
-// 미사일 궤적 그리기 함수
-function drawMissileTrail(missile) {
-    // 위쪽(0 라디안)으로 향하도록
-    drawTaurusMissile(ctx, missile.x, missile.y, missile.width, missile.height, 0);
-}
+// 미사일 궤적 그리기 함수 제거됨 (총알로 대체)
+// function drawMissileTrail(missile) {
+//     // 미사일 궤적이 총알로 대체됨
+// }
 
-// 적 비행기 미사일 처리 함수
-function handleEnemyMissiles() {
-    enemies.forEach(enemy => {
-        if (enemy.type === ENEMY_TYPES.PLANE && enemy.missiles) {
-            const currentTime = Date.now();
-
-            // 10초 간격으로 1발씩, 최대 2발만 발사
-            if (
-                enemy.canFire &&
-                currentTime - enemy.lastFireTime >= enemy.fireInterval &&
-                enemy.missileCount > 0 &&
-                enemy.missiles.length < 2 // 동시에 2발까지만
-            ) {
-                createEnemyMissile(enemy);
-                enemy.lastFireTime = currentTime;
-                enemy.missileCount--;
-            }
-
-            // 미사일 위치 업데이트 및 처리
-            enemy.missiles = enemy.missiles.filter(missile => {
-                // 상단 효과 무시 영역 체크
-                if (missile.y < TOP_EFFECT_ZONE) {
-                    return true; // 미사일은 계속 이동하되 효과는 발생하지 않음
-                }
-                
-                // 미사일이 비행기와 함께 움직이도록 위치 업데이트
-                missile.x = enemy.x + enemy.width / 2 - 15 + (missile.offsetX || 0);
-                missile.y += missile.speed;
-
-                // 미사일 그리기
-                drawTaurusMissile(ctx, missile.x, missile.y, missile.width, missile.height, Math.PI);
-                drawMissileTrail(missile);
-
-                // 플레이어와의 충돌 체크
-                if (checkCollision(missile, player)) {
-                    handleCollision();
-                    return false;
-                }
-
-                // 플레이어 총알과의 충돌 체크
-                for (let i = bullets.length - 1; i >= 0; i--) {
-                    if (checkCollision(missile, bullets[i])) {
-                        // 총알 충돌과 동일한 작은 폭발 효과
-                        explosions.push(new Explosion(
-                            missile.x + missile.width / 2,
-                            missile.y + missile.height / 2,
-                            false
-                        ));
-                        
-                        // 발사음으로 변경
-                        safePlaySound('shoot');
-                        bullets.splice(i, 1);
-                        return false; // 미사일 제거
-                    }
-                }
-
-                // 화면 밖으로 나간 미사일 제거
-                return missile.y < canvas.height;
-            });
-        }
-    });
-}
+// 적 비행기 미사일 처리 함수 제거됨 (총알로 대체)
+// function handleEnemyMissiles() {
+//     // 미사일 발사 로직이 총알 발사로 대체됨
+// }
 
 // 적 위치 업데이트 함수 수정
 function updateEnemyPosition(enemy, options = {}) {
