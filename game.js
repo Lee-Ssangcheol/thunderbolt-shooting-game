@@ -38,11 +38,14 @@ resizeCanvas();
 class GameSoundManager {
     constructor() {
         this.sounds = {};
+        this.audioContext = null;
+        this.audioBuffers = {};  // Web Audio API용 오디오 버퍼
         this.initialized = false;
         this.volume = 0.1;
         this.enabled = true;
         this.lastCollisionTime = 0;
         this.collisionSoundCooldown = 300;
+        this.useWebAudioAPI = true;  // Web Audio API 사용 여부
     }
 
     async initialize() {
@@ -53,42 +56,128 @@ class GameSoundManager {
         
         console.log('사운드 매니저 초기화 시작');
         try {
-            if (window.electronAPI) {
-                console.log('Electron 환경에서 사운드 로드 시작');
-                // Electron 환경에서 사운드 로드
-                const soundFiles = ['shoot', 'explosion', 'collision', 'levelup'];
+            // Web Audio API 초기화
+            if (typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined') {
+                this.audioContext = new (AudioContext || webkitAudioContext)();
+                console.log('Web Audio API 초기화 완료');
                 
-                for (const soundName of soundFiles) {
-                    const soundPath = await window.electronAPI.getSoundPath(`${soundName}.mp3`);
-                    console.log(`Loading sound: ${soundName} from ${soundPath}`);
-                    
-                    this.sounds[soundName] = new Audio(soundPath);
-                    this.sounds[soundName].volume = this.volume;
-                }
-                
-                console.log('사운드 초기화 완료 (Electron)');
+                // Web Audio API를 사용하여 사운드 로드
+                await this.loadSoundsWithWebAudioAPI();
             } else {
-                console.log('웹 환경에서 사운드 로드 시작');
-                // 웹 환경에서 사운드 로드
-                this.sounds = {
-                    shoot: new Audio('sounds/shoot.mp3'),
-                    explosion: new Audio('sounds/explosion.mp3'),
-                    collision: new Audio('sounds/collision.mp3'),
-                    levelup: new Audio('sounds/levelup.mp3')
-                };
-                
-                // 볼륨 설정
-                Object.values(this.sounds).forEach(sound => {
-                    sound.volume = this.volume;
-                });
-                
-                console.log('사운드 초기화 완료 (웹)');
+                console.log('Web Audio API를 지원하지 않음, HTML5 Audio 사용');
+                this.useWebAudioAPI = false;
+                await this.loadSoundsWithHTML5Audio();
             }
             
             this.initialized = true;
             console.log('사운드 매니저 초기화 완료, 사운드 개수:', Object.keys(this.sounds).length);
+            
+            // 초기화된 사운드 상태 확인
+            Object.keys(this.sounds).forEach(soundName => {
+                const sound = this.sounds[soundName];
+                console.log(`사운드 ${soundName}: src=${sound.src}, readyState=${sound.readyState}`);
+            });
+            
+            // 1초 후 사운드 상태 재확인
+            setTimeout(() => {
+                console.log('=== 1초 후 사운드 상태 재확인 ===');
+                Object.keys(this.sounds).forEach(soundName => {
+                    const sound = this.sounds[soundName];
+                    console.log(`사운드 ${soundName}: src=${sound.src}, readyState=${sound.readyState}, duration=${sound.duration}`);
+                });
+            }, 1000);
+            
         } catch (error) {
             console.error('사운드 초기화 실패:', error);
+            // Web Audio API 실패 시 HTML5 Audio로 fallback
+            console.log('Web Audio API 실패, HTML5 Audio로 fallback');
+            this.useWebAudioAPI = false;
+            await this.loadSoundsWithHTML5Audio();
+            this.initialized = true;
+        }
+    }
+    
+    // Web Audio API를 사용한 사운드 로드
+    async loadSoundsWithWebAudioAPI() {
+        console.log('Web Audio API로 사운드 로드 시작');
+        const soundFiles = ['shoot', 'explosion', 'collision', 'levelup', 'warning'];
+        
+        for (const soundName of soundFiles) {
+            try {
+                let soundPath;
+                if (window.electronAPI) {
+                    soundPath = await window.electronAPI.getSoundPath(`${soundName}.mp3`);
+                } else {
+                    soundPath = `sounds/${soundName}.mp3`;
+                }
+                
+                console.log(`Loading sound with Web Audio API: ${soundName} from ${soundPath}`);
+                
+                // Fetch API로 오디오 파일 로드
+                const response = await fetch(soundPath);
+                const arrayBuffer = await response.arrayBuffer();
+                
+                // Web Audio API로 디코딩
+                const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+                this.audioBuffers[soundName] = audioBuffer;
+                
+                // HTML5 Audio도 함께 로드 (fallback용)
+                this.sounds[soundName] = new Audio();
+                this.sounds[soundName].src = soundPath;
+                this.sounds[soundName].volume = this.volume;
+                this.sounds[soundName].preload = 'auto';
+                
+                console.log(`사운드 로딩 완료 (Web Audio API): ${soundName}`);
+                
+            } catch (error) {
+                console.error(`Web Audio API 사운드 로딩 실패 (${soundName}):`, error);
+                // Web Audio API 실패 시 HTML5 Audio만 사용
+                await this.loadSingleSoundWithHTML5Audio(soundName);
+            }
+        }
+    }
+    
+    // HTML5 Audio를 사용한 사운드 로드
+    async loadSoundsWithHTML5Audio() {
+        console.log('HTML5 Audio로 사운드 로드 시작');
+        const soundFiles = ['shoot', 'explosion', 'collision', 'levelup', 'warning'];
+        
+        for (const soundName of soundFiles) {
+            await this.loadSingleSoundWithHTML5Audio(soundName);
+        }
+    }
+    
+    // 단일 사운드를 HTML5 Audio로 로드
+    async loadSingleSoundWithHTML5Audio(soundName) {
+        try {
+            let soundPath;
+            if (window.electronAPI) {
+                soundPath = await window.electronAPI.getSoundPath(`${soundName}.mp3`);
+            } else {
+                soundPath = `sounds/${soundName}.mp3`;
+            }
+            
+            console.log(`Loading sound with HTML5 Audio: ${soundName} from ${soundPath}`);
+            
+            this.sounds[soundName] = new Audio();
+            this.sounds[soundName].src = soundPath;
+            this.sounds[soundName].volume = this.volume;
+            this.sounds[soundName].preload = 'auto';
+            
+            // 로딩 완료 이벤트 리스너
+            this.sounds[soundName].addEventListener('canplaythrough', () => {
+                console.log(`사운드 로딩 완료 (HTML5): ${soundName}`);
+            });
+            
+            this.sounds[soundName].addEventListener('error', (e) => {
+                console.error(`사운드 로딩 실패 (HTML5): ${soundName}`, e);
+            });
+            
+            // 사운드 로드 시작
+            this.sounds[soundName].load();
+            
+        } catch (error) {
+            console.error(`HTML5 Audio 사운드 로딩 실패 (${soundName}):`, error);
         }
     }
 
@@ -114,14 +203,126 @@ class GameSoundManager {
                 this.lastCollisionTime = now;
             }
             
-            this.sounds[soundName].currentTime = 0;
-            console.log('사운드 재생 시도:', soundName);
-            this.sounds[soundName].play().catch(e => {
+            try {
+                // Web Audio API를 사용한 고품질 재생 시도
+                if (this.useWebAudioAPI && this.audioContext && this.audioBuffers[soundName]) {
+                    await this.playWithWebAudioAPI(soundName);
+                } else {
+                    // HTML5 Audio를 사용한 재생
+                    await this.playWithHTML5Audio(soundName);
+                }
+            } catch (e) {
                 console.error('Audio play failed:', e);
-            });
+                // 재생 실패 시 HTML5 Audio로 fallback
+                try {
+                    await this.playWithHTML5Audio(soundName);
+                } catch (fallbackError) {
+                    console.error('Fallback audio play also failed:', fallbackError);
+                }
+            }
         } else {
             console.log('사운드 파일이 존재하지 않음:', soundName);
             console.log('사용 가능한 사운드:', Object.keys(this.sounds));
+        }
+    }
+    
+    // Web Audio API를 사용한 고품질 사운드 재생
+    async playWithWebAudioAPI(soundName) {
+        try {
+            if (this.audioContext.state === 'suspended') {
+                await this.audioContext.resume();
+            }
+            
+            const audioBuffer = this.audioBuffers[soundName];
+            const source = this.audioContext.createBufferSource();
+            const gainNode = this.audioContext.createGain();
+            
+            // 고품질 오디오 설정
+            source.buffer = audioBuffer;
+            source.playbackRate.setValueAtTime(1.0, this.audioContext.currentTime);
+            
+            // 오디오 체인 연결
+            source.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
+            
+            // 볼륨 설정 (부드러운 페이드 인)
+            gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(this.volume, this.audioContext.currentTime + 0.01);
+            
+            // 사운드 재생
+            source.start(0);
+            
+            console.log('Web Audio API로 사운드 재생 성공:', soundName);
+            
+            // 재생 완료 후 정리
+            source.onended = () => {
+                source.disconnect();
+                gainNode.disconnect();
+            };
+            
+        } catch (error) {
+            console.error('Web Audio API 재생 실패:', error);
+            throw error;
+        }
+    }
+    
+    // HTML5 Audio를 사용한 사운드 재생
+    async playWithHTML5Audio(soundName) {
+        try {
+            const sound = this.sounds[soundName];
+            
+            // 사운드가 존재하고 src가 설정되어 있는지 확인
+            if (!sound || !sound.src) {
+                console.error('사운드가 초기화되지 않음:', soundName);
+                return;
+            }
+            
+            // 사운드가 로딩되지 않은 경우 대기
+            if (sound.readyState < 2) { // HAVE_CURRENT_DATA 미만
+                console.log('사운드 로딩 대기 중:', soundName);
+                await new Promise(resolve => {
+                    const onCanPlay = () => {
+                        sound.removeEventListener('canplaythrough', onCanPlay);
+                        sound.removeEventListener('error', onError);
+                        clearTimeout(timeoutId);
+                        resolve();
+                    };
+                    
+                    const onError = (e) => {
+                        sound.removeEventListener('canplaythrough', onCanPlay);
+                        sound.removeEventListener('error', onError);
+                        clearTimeout(timeoutId);
+                        console.error('사운드 로딩 실패:', soundName, e);
+                        resolve();
+                    };
+                    
+                    sound.addEventListener('canplaythrough', onCanPlay);
+                    sound.addEventListener('error', onError);
+                    
+                    // 3초 타임아웃
+                    const timeoutId = setTimeout(() => {
+                        sound.removeEventListener('canplaythrough', onCanPlay);
+                        sound.removeEventListener('error', onError);
+                        console.log('사운드 로딩 타임아웃:', soundName);
+                        resolve();
+                    }, 3000);
+                });
+            }
+            
+            // 사운드 재생
+            sound.currentTime = 0;
+            sound.volume = this.volume;
+            
+            // 사운드 품질 향상을 위한 추가 설정
+            sound.playbackRate = 1.0;
+            sound.preservesPitch = true;
+            
+            console.log('HTML5 Audio로 사운드 재생 시도:', soundName);
+            await sound.play();
+            
+        } catch (error) {
+            console.error('HTML5 Audio 재생 실패:', error);
+            throw error;
         }
     }
 
@@ -142,8 +343,17 @@ class GameSoundManager {
     setVolume(volume) {
         this.volume = Math.max(0, Math.min(1, volume));
         Object.values(this.sounds).forEach(sound => {
-            sound.volume = this.volume;
+            // 볼륨을 단계적으로 설정하여 왜곡 방지
+            if (sound.readyState >= 2) { // HAVE_CURRENT_DATA 이상
+                sound.volume = this.volume;
+            }
         });
+        
+        // Web Audio API 볼륨도 조정
+        if (this.audioContext && this.audioContext.state === 'running') {
+            // 오디오 컨텍스트의 마스터 볼륨 조정
+            console.log('Web Audio API 볼륨 조정:', this.volume);
+        }
     }
 
     setEnabled(enabled) {
@@ -159,6 +369,57 @@ class GameSoundManager {
 
     isEnabled() {
         return this.enabled;
+    }
+    
+    // 사운드 품질 진단
+    diagnoseSoundQuality(soundName) {
+        console.log(`=== 사운드 품질 진단 - ${soundName} ===`);
+        
+        if (this.sounds[soundName]) {
+            const sound = this.sounds[soundName];
+            console.log('HTML5 Audio 정보:');
+            console.log('  - src:', sound.src);
+            console.log('  - readyState:', sound.readyState);
+            console.log('  - duration:', sound.duration);
+            console.log('  - volume:', sound.volume);
+            console.log('  - paused:', sound.paused);
+            console.log('  - ended:', sound.ended);
+            console.log('  - error:', sound.error);
+        } else {
+            console.log('HTML5 Audio: 사운드가 존재하지 않음');
+        }
+        
+        if (this.audioBuffers[soundName]) {
+            const buffer = this.audioBuffers[soundName];
+            console.log('Web Audio API 정보:');
+            console.log('  - duration:', buffer.duration);
+            console.log('  - numberOfChannels:', buffer.numberOfChannels);
+            console.log('  - sampleRate:', buffer.sampleRate);
+            console.log('  - length:', buffer.length);
+        } else {
+            console.log('Web Audio API: 오디오 버퍼가 존재하지 않음');
+        }
+        
+        if (this.audioContext) {
+            console.log('Web Audio API 컨텍스트:');
+            console.log('  - 상태:', this.audioContext.state);
+            console.log('  - 샘플레이트:', this.audioContext.sampleRate);
+            console.log('  - 현재 시간:', this.audioContext.currentTime);
+        } else {
+            console.log('Web Audio API: 컨텍스트가 존재하지 않음');
+        }
+        
+        console.log('사용 중인 재생 방식:', this.useWebAudioAPI ? 'Web Audio API' : 'HTML5 Audio');
+        console.log('=====================================');
+    }
+    
+    // 모든 사운드 품질 진단
+    diagnoseAllSounds() {
+        console.log('=== 모든 사운드 품질 진단 ===');
+        Object.keys(this.sounds).forEach(soundName => {
+            this.diagnoseSoundQuality(soundName);
+        });
+        console.log('=== 진단 완료 ===');
     }
 }
 
@@ -189,7 +450,28 @@ const waitForAPIAndInitSounds = () => {
 
 // 사운드 초기화 시작
 console.log('사운드 초기화 시작');
-waitForAPIAndInitSounds();
+
+// 사용자 상호작용 후 사운드 초기화 (브라우저 정책 준수)
+const initSoundsAfterInteraction = () => {
+    waitForAPIAndInitSounds();
+    // 이벤트 리스너 제거
+    document.removeEventListener('click', initSoundsAfterInteraction);
+    document.removeEventListener('keydown', initSoundsAfterInteraction);
+    document.removeEventListener('touchstart', initSoundsAfterInteraction);
+};
+
+// 사용자 상호작용 이벤트 리스너 추가
+document.addEventListener('click', initSoundsAfterInteraction, { once: true });
+document.addEventListener('keydown', initSoundsAfterInteraction, { once: true });
+document.addEventListener('touchstart', initSoundsAfterInteraction, { once: true });
+
+// 자동 초기화도 시도 (일부 브라우저에서 작동)
+setTimeout(() => {
+    if (!gameSoundManager.initialized) {
+        console.log('자동 사운드 초기화 시도');
+        waitForAPIAndInitSounds();
+    }
+}, 1000);
 
 // 기존 사운드 변수들을 사운드 매니저로 대체
 const shootSound = { play: () => gameSoundManager.play('shoot') };
@@ -250,6 +532,9 @@ let enemySpeed = 2;  // 적 이동 속도
 let lastCollisionTime = 0;  // 마지막 충돌 시간
 let collisionSoundCooldown = 300;  // 충돌음 쿨다운 시간
 let shieldedHelicopterDestroyed = 0;  // 보호막 헬리콥터 파괴 카운터
+let lifeWarningBlinkTimer = 0;  // 목숨 경고 깜빡임 타이머
+let lifeWarningBlinkDuration = 2000;  // 목숨 경고 깜빡임 지속 시간 (2초)
+let lastLifeCount = 0;  // 이전 목숨 개수 (변화 감지용)
 
 // 보스 패턴 상수 추가
 const BOSS_PATTERNS = {
@@ -781,10 +1066,12 @@ async function initializeGame() {
         
         collisionCount = 0;
         maxLives = 5;  // 최대 목숨 초기화
+        lastLifeCount = maxLives;  // 초기 목숨 개수 설정
         shieldedHelicopterDestroyed = 0;  // 보호막 헬리콥터 파괴 카운터 초기화
         isGameOver = false;
         isPaused = false;
         flashTimer = 0;
+        lifeWarningBlinkTimer = 0;  // 목숨 경고 깜빡임 타이머 초기화
         gameOverStartTime = null;
         isSnakePatternActive = false;
         snakeEnemies = [];
@@ -846,9 +1133,11 @@ function restartGame() {
     // 게임 상태 초기화
     collisionCount = 0;
     maxLives = 5;  // 최대 목숨 초기화
+    lastLifeCount = maxLives;  // 초기 목숨 개수 설정
     shieldedHelicopterDestroyed = 0;  // 보호막 헬리콥터 파괴 카운터 초기화
     isGameOver = false;
     hasSecondPlane = false;
+    lifeWarningBlinkTimer = 0;  // 목숨 경고 깜빡임 타이머 초기화
     
     // 목숨 추가 메시지 초기화
     if (window.lifeAddedMessage) {
@@ -1566,6 +1855,16 @@ function handleCollision() {
         collisionCount++;
         flashTimer = flashDuration;
         
+        // 목숨이 줄어들 때마다 경고음 재생 및 깜빡임 효과 시작
+        const currentLifeCount = maxLives - collisionCount;
+        if (currentLifeCount < lastLifeCount) {
+            // 경고음 재생
+            safePlaySound('warning');
+            // 깜빡임 효과 시작
+            lifeWarningBlinkTimer = lifeWarningBlinkDuration;
+        }
+        lastLifeCount = currentLifeCount;
+        
         if (currentTime - lastCollisionTime >= collisionSoundCooldown) {
             safePlaySound('collision');
             lastCollisionTime = currentTime;
@@ -1784,6 +2083,11 @@ function gameLoop() {
             ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             flashTimer -= 16;
+        }
+
+        // 목숨 경고 깜빡임 타이머 업데이트
+        if (lifeWarningBlinkTimer > 0) {
+            lifeWarningBlinkTimer -= 16;
         }
 
         // 플레이어 이동 처리
@@ -2637,8 +2941,26 @@ function drawUI() {
     }
     ctx.fillText(`일시정지: P키`, 20, 250);
     
-    // 충돌 횟수 표시 (붉은색으로)
-    ctx.fillStyle = 'red';
+    // 충돌 횟수 표시 (깜빡이는 효과 포함)
+    if (lifeWarningBlinkTimer > 0) {
+        // 깜빡이는 효과: 흰 배경에 빨간 텍스트
+        const blinkSpeed = 200; // 깜빡임 속도 (밀리초)
+        const currentTime = Date.now();
+        const isBlinking = Math.floor(currentTime / blinkSpeed) % 2 === 0;
+        
+        if (isBlinking) {
+            // 흰 배경에 빨간 텍스트
+            ctx.fillStyle = 'white';
+            ctx.fillRect(15, 265, 150, 25);
+            ctx.fillStyle = 'red';
+        } else {
+            // 빨간 텍스트
+            ctx.fillStyle = 'red';
+        }
+    } else {
+        // 일반 상태: 빨간 텍스트
+        ctx.fillStyle = 'red';
+    }
     ctx.font = 'bold 20px Arial';  // 폰트를 진하게 변경
     ctx.fillText(`남은 목숨: ${maxLives - collisionCount}`, 20, 280);
     
@@ -5036,6 +5358,15 @@ async function resetAllHighScores() {
 window.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.shiftKey && e.code === 'KeyR') {
         resetAllHighScores();
+    }
+});
+
+// 단축키: Ctrl+Shift+D로 사운드 품질 진단
+window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && e.code === 'KeyD') {
+        if (gameSoundManager) {
+            gameSoundManager.diagnoseAllSounds();
+        }
     }
 });
 
