@@ -181,7 +181,7 @@ class GameSoundManager {
         }
     }
 
-    async play(soundName) {
+    async play(soundName, options = {}) {
         console.log('GameSoundManager.play 호출됨:', soundName);
         console.log('사운드 매니저 활성화 상태:', this.enabled);
         console.log('사운드 매니저 초기화 상태:', this.initialized);
@@ -206,16 +206,16 @@ class GameSoundManager {
             try {
                 // Web Audio API를 사용한 고품질 재생 시도
                 if (this.useWebAudioAPI && this.audioContext && this.audioBuffers[soundName]) {
-                    await this.playWithWebAudioAPI(soundName);
+                    await this.playWithWebAudioAPI(soundName, options);
                 } else {
                     // HTML5 Audio를 사용한 재생
-                    await this.playWithHTML5Audio(soundName);
+                    await this.playWithHTML5Audio(soundName, options);
                 }
             } catch (e) {
                 console.error('Audio play failed:', e);
                 // 재생 실패 시 HTML5 Audio로 fallback
                 try {
-                    await this.playWithHTML5Audio(soundName);
+                    await this.playWithHTML5Audio(soundName, options);
                 } catch (fallbackError) {
                     console.error('Fallback audio play also failed:', fallbackError);
                 }
@@ -227,7 +227,7 @@ class GameSoundManager {
     }
     
     // Web Audio API를 사용한 고품질 사운드 재생
-    async playWithWebAudioAPI(soundName) {
+    async playWithWebAudioAPI(soundName, options = {}) {
         try {
             if (this.audioContext.state === 'suspended') {
                 await this.audioContext.resume();
@@ -247,7 +247,9 @@ class GameSoundManager {
             
             // 볼륨 설정 (부드러운 페이드 인)
             gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
-            gainNode.gain.linearRampToValueAtTime(this.volume, this.audioContext.currentTime + 0.01);
+            const volumeMultiplier = (typeof options.volume === 'number') ? options.volume : 1;
+            const targetVolume = Math.max(0, Math.min(1, this.volume * volumeMultiplier));
+            gainNode.gain.linearRampToValueAtTime(targetVolume, this.audioContext.currentTime + 0.01);
             
             // 사운드 재생
             source.start(0);
@@ -267,7 +269,7 @@ class GameSoundManager {
     }
     
     // HTML5 Audio를 사용한 사운드 재생
-    async playWithHTML5Audio(soundName) {
+    async playWithHTML5Audio(soundName, options = {}) {
         try {
             const sound = this.sounds[soundName];
             
@@ -311,7 +313,8 @@ class GameSoundManager {
             
             // 사운드 재생
             sound.currentTime = 0;
-            sound.volume = this.volume;
+            const volumeMultiplier = (typeof options.volume === 'number') ? options.volume : 1;
+            sound.volume = Math.max(0, Math.min(1, this.volume * volumeMultiplier));
             
             // 사운드 품질 향상을 위한 추가 설정
             sound.playbackRate = 1.0;
@@ -1844,7 +1847,7 @@ function handleCollision() {
         return;
     }
     
-    safePlaySound('explosion');
+    safePlaySound('explosion', { volume: 3 }); // 플레이어 폭발음 3배 증가
     try {
         if (hasShield) {
             hasShield = false;
@@ -3257,7 +3260,7 @@ document.addEventListener('keyup', (e) => {
 
 // 게임 오버 시 점수 처리 수정
 function handleGameOver() {
-    safePlaySound('explosion');
+    safePlaySound('explosion', { volume: 3 }); // 플에이어 폭발음 3배 증가
     try {
         if (!isGameOver) {
             isGameOver = true;
@@ -5310,7 +5313,7 @@ function safePlay(audio) {
 }
 
 // 새로운 사운드 매니저를 사용하는 safePlay 함수
-function safePlaySound(soundName) {
+function safePlaySound(soundName, options = undefined) {
     try {
         console.log('safePlaySound 호출됨:', soundName);
         console.log('gameSoundManager 존재:', !!gameSoundManager);
@@ -5322,7 +5325,11 @@ function safePlaySound(soundName) {
         
         if (gameSoundManager && gameSoundManager.isEnabled()) {
             console.log('사운드 재생 시도:', soundName);
-            gameSoundManager.play(soundName);
+            if (options) {
+                gameSoundManager.play(soundName, options);
+            } else {
+                gameSoundManager.play(soundName);
+            }
         } else {
             console.log('사운드 재생 실패 - 매니저가 비활성화되었거나 초기화되지 않음');
         }
