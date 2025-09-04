@@ -1847,7 +1847,7 @@ function handleCollision() {
         return;
     }
     
-    safePlaySound('explosion', { volume: 3 }); // 플레이어 폭발음 3배 증가
+    safePlaySound('explosion', { volume: 2 }); // 플레이어 폭발음 2배 증가
     try {
         if (hasShield) {
             hasShield = false;
@@ -3260,7 +3260,7 @@ document.addEventListener('keyup', (e) => {
 
 // 게임 오버 시 점수 처리 수정
 function handleGameOver() {
-    safePlaySound('explosion', { volume: 3 }); // 플에이어 폭발음 3배 증가
+    safePlaySound('explosion', { volume: 2 }); // 플에이어 폭발음 2배 증가
     try {
         if (!isGameOver) {
             isGameOver = true;
