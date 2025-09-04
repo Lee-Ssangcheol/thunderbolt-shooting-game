@@ -1868,10 +1868,11 @@ function handleCollision() {
         }
         lastLifeCount = currentLifeCount;
         
-        if (currentTime - lastCollisionTime >= collisionSoundCooldown) {
-            safePlaySound('collision');
-            lastCollisionTime = currentTime;
-        }
+        // 충돌음 제거 - 경고음만 재생
+        // if (currentTime - lastCollisionTime >= collisionSoundCooldown) {
+        //     safePlaySound('collision');
+        //     lastCollisionTime = currentTime;
+        // }
         
         // 목숨이 모두 소진되었을 때만 게임 오버
         if (collisionCount >= maxLives) {
