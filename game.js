@@ -1847,7 +1847,7 @@ function handleCollision() {
         return;
     }
     
-    safePlaySound('explosion', { volume: 2 }); // 플레이어 폭발음 2배 증가
+    safePlaySound('explosion', { volume: 3 }); // 플레이어 폭발음 2배 증가
     try {
         if (hasShield) {
             hasShield = false;
@@ -1861,8 +1861,11 @@ function handleCollision() {
         // 목숨이 줄어들 때마다 경고음 재생 및 깜빡임 효과 시작
         const currentLifeCount = maxLives - collisionCount;
         if (currentLifeCount < lastLifeCount) {
-            // 경고음 재생
-            safePlaySound('warning');
+            // 경고음 재생 (쿨다운 적용)
+            if (currentTime - lastCollisionTime >= collisionSoundCooldown) {
+                safePlaySound('warning');
+                lastCollisionTime = currentTime;
+            }
             // 깜빡임 효과 시작
             lifeWarningBlinkTimer = lifeWarningBlinkDuration;
         }
@@ -3261,7 +3264,7 @@ document.addEventListener('keyup', (e) => {
 
 // 게임 오버 시 점수 처리 수정
 function handleGameOver() {
-    safePlaySound('explosion', { volume: 2 }); // 플에이어 폭발음 2배 증가
+    safePlaySound('explosion', { volume: 3 }); // 플레이어 폭발음 배 증가
     try {
         if (!isGameOver) {
             isGameOver = true;
