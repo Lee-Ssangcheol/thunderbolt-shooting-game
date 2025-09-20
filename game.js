@@ -3320,7 +3320,12 @@ function updateScore(points) {
     // 특수 무기 게이지 증가 (첨부 파일과 동일한 방식)
     specialWeaponCharge += points;
     if (specialWeaponCharge >= SPECIAL_WEAPON_MAX_CHARGE) {
-        specialWeaponCount += Math.floor(specialWeaponCharge / SPECIAL_WEAPON_MAX_CHARGE);
+        const newWeapons = Math.floor(specialWeaponCharge / SPECIAL_WEAPON_MAX_CHARGE);
+        specialWeaponCount += newWeapons;
+        // 최대 보유 개수 5개로 제한
+        if (specialWeaponCount > 5) {
+            specialWeaponCount = 5;
+        }
         specialWeaponCharge = specialWeaponCharge % SPECIAL_WEAPON_MAX_CHARGE;
         specialWeaponCharged = specialWeaponCount > 0;
     }
