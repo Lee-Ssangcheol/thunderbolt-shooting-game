@@ -3061,7 +3061,7 @@ function drawUI() {
     }
     ctx.font = 'bold 16px Arial';
     ctx.textAlign = 'center';
-    const displayText = `특수무기: ${chargePercent}%(보유:${displayCount}개)`;
+    const displayText = `특수무기: ${chargePercent}%(보유:${displayCount}/5개)`;
     ctx.fillText(displayText, 110, shieldInfoHeight + 15);
     
     // 준비 완료 메시지 (특수무기가 있을 때만)
