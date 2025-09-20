@@ -530,6 +530,7 @@ let bossHealth = 0;
 let bossPattern = 0;
 let specialWeaponCharged = false;
 let specialWeaponCharge = 0;
+let specialWeaponCount = 0;  // 특수무기 개수
 let enemySpawnRate = 2000;  // 적 생성 주기 (ms)
 let enemySpeed = 2;  // 적 이동 속도
 let lastCollisionTime = 0;  // 마지막 충돌 시간
@@ -1173,6 +1174,7 @@ function restartGame() {
     // 특수무기 관련 상태 초기화
     specialWeaponCharged = false;
     specialWeaponCharge = 0;
+    specialWeaponCount = 0;
     
     // 보스 관련 상태 초기화
     bossActive = false;
@@ -2859,7 +2861,7 @@ function handleBulletFiring() {
 
 // 특수 무기 처리 함수 수정
 function handleSpecialWeapon() {
-    if (specialWeaponCharged && keys.KeyB) {  // KeyN을 KeyB로 변경
+    if ((specialWeaponCharged || specialWeaponCount > 0) && keys.KeyB) {  // KeyN을 KeyB로 변경
         // 특수 무기 발사 - 더 많은 총알과 강력한 효과
         for (let i = 0; i < 360; i += 5) { // 각도 간격을 10도에서 5도로 감소
             const angle = (i * Math.PI) / 180;
@@ -2896,8 +2898,13 @@ function handleSpecialWeapon() {
             }
         }
         
-        specialWeaponCharged = false;
-        specialWeaponCharge = 0;
+        // 특수무기 사용 후 상태 업데이트
+        if (specialWeaponCharged) {
+            specialWeaponCharged = false;
+            specialWeaponCharge = 0;
+        } else if (specialWeaponCount > 0) {
+            specialWeaponCount--;
+        }
         
         // 특수 무기 발사 효과음
         safePlaySound('shoot');
@@ -3019,7 +3026,67 @@ function drawUI() {
     // 특수 무기 게이지 표시
     const shieldInfoHeight = 310;
     
-    if (!specialWeaponCharged) {
+    // 특수무기 상태 표시
+    if (specialWeaponCount > 0) {
+        // 특수무기 개수가 있을 때
+        if (specialWeaponCharged) {
+            // 준비 완료 상태 - 깜빡이는 효과
+            const blinkSpeed = 500; // 깜빡임 속도 (밀리초)
+            const currentTime = Date.now();
+            const isRed = Math.floor(currentTime / blinkSpeed) % 2 === 0;
+            
+            // 배경색 설정 (게이지 바)
+            ctx.fillStyle = isRed ? 'rgba(255, 0, 0, 0.3)' : 'rgba(0, 0, 255, 0.3)';
+            ctx.fillRect(10, shieldInfoHeight - 20, 200, 20);
+            
+            // 테두리 효과
+            ctx.strokeStyle = isRed ? 'red' : 'cyan';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(10, shieldInfoHeight - 20, 200, 20);
+            
+            // 게이지 바 위에 텍스트 표시 (충전률만)
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            const percentText = `특수 무기 : ${Math.floor((specialWeaponCharge / SPECIAL_WEAPON_MAX_CHARGE) * 100)}%`;
+            ctx.fillText(percentText, 120, shieldInfoHeight - 5);
+            
+            // 준비 완료 메시지 배경
+            ctx.fillStyle = isRed ? 'rgba(255, 0, 0, 0.2)' : 'rgba(0, 0, 255, 0.2)';
+            ctx.fillRect(10, shieldInfoHeight, 300, 30);
+            
+            // 텍스트 색상 설정
+            ctx.fillStyle = isRed ? 'red' : 'cyan';
+            ctx.font = 'bold 20px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText(`보유: ${specialWeaponCount}개 (영문 'B' 클릭 발사)`, 15, shieldInfoHeight + 20);
+        } else {
+            // 준비되지 않은 상태 - 개수와 충전률 표시
+            // 게이지 바 배경
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.fillRect(20, shieldInfoHeight, 200, 20);
+            
+            // 게이지 바 (현재 충전량 표시)
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.8)';
+            ctx.fillRect(20, shieldInfoHeight, (specialWeaponCharge / SPECIAL_WEAPON_MAX_CHARGE) * 200, 20);
+            
+            // 게이지 바 위에 텍스트 표시 (충전률만)
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            const percentText = `특수 무기 : ${Math.floor((specialWeaponCharge / SPECIAL_WEAPON_MAX_CHARGE) * 100)}%`;
+            ctx.fillText(percentText, 120, shieldInfoHeight + 15);
+            
+            // 추가 정보 표시
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(20, shieldInfoHeight + 25, 200, 20);
+            ctx.fillStyle = 'yellow';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`보유: ${specialWeaponCount}개 (B키로 발사 가능)`, 120, shieldInfoHeight + 38);
+        }
+    } else if (!specialWeaponCharged) {
+        // 특수무기 개수가 없고 준비되지 않은 상태 - 충전 중
         // 게이지 바 배경
         ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
         ctx.fillRect(20, shieldInfoHeight, 200, 20);
@@ -3034,37 +3101,6 @@ function drawUI() {
         ctx.textAlign = 'center';
         const percentText = `특수 무기 : ${Math.floor((specialWeaponCharge / SPECIAL_WEAPON_MAX_CHARGE) * 100)}%`;
         ctx.fillText(percentText, 120, shieldInfoHeight + 15);
-    } else {
-        // 깜빡이는 효과를 위한 시간 계산
-        const blinkSpeed = 500; // 깜빡임 속도 (밀리초)
-        const currentTime = Date.now();
-        const isRed = Math.floor(currentTime / blinkSpeed) % 2 === 0;
-        
-        // 배경색 설정 (게이지 바)
-        ctx.fillStyle = isRed ? 'rgba(255, 0, 0, 0.3)' : 'rgba(0, 0, 255, 0.3)';
-        ctx.fillRect(10, shieldInfoHeight - 20, 200, 20);
-        
-        // 테두리 효과
-        ctx.strokeStyle = isRed ? 'red' : 'cyan';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(10, shieldInfoHeight - 20, 200, 20);
-        
-        // 게이지 바 위에 텍스트 표시
-        ctx.fillStyle = 'white';
-        ctx.font = 'bold 16px Arial';
-        ctx.textAlign = 'center';
-        const percentText = `특수 무기 : ${Math.floor((specialWeaponCharge / SPECIAL_WEAPON_MAX_CHARGE) * 100)}%`;
-        ctx.fillText(percentText, 120, shieldInfoHeight - 5);
-        
-        // 준비 완료 메시지 배경
-        ctx.fillStyle = isRed ? 'rgba(255, 0, 0, 0.2)' : 'rgba(0, 0, 255, 0.2)';
-        ctx.fillRect(10, shieldInfoHeight, 300, 30);
-        
-        // 텍스트 색상 설정
-        ctx.fillStyle = isRed ? 'red' : 'cyan';
-        ctx.font = 'bold 20px Arial';
-        ctx.textAlign = 'left';
-        ctx.fillText('특수 무기 준비 완료(영문 \'B\' 클릭 발사)', 15, shieldInfoHeight + 20);
     }
     
     // 보스 체력 표시 개선
@@ -3313,6 +3349,13 @@ function updateScore(points) {
         if (specialWeaponCharge >= SPECIAL_WEAPON_MAX_CHARGE) {
             specialWeaponCharged = true;
             specialWeaponCharge = SPECIAL_WEAPON_MAX_CHARGE;
+        }
+    } else {
+        // 특수무기가 준비된 상태에서도 점수를 획득하면 특수무기 개수 누적
+        specialWeaponCharge += points;
+        if (specialWeaponCharge >= SPECIAL_WEAPON_MAX_CHARGE) {
+            specialWeaponCount++;
+            specialWeaponCharge = 0;  // 충전량 초기화
         }
     }
     
