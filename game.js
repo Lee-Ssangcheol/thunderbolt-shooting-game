@@ -1058,6 +1058,11 @@ async function initializeGame() {
         levelScore = 0;
         scoreForSpread = 0;
         
+        // 특수무기 관련 상태 초기화
+        specialWeaponCharged = false;
+        specialWeaponCharge = 0;
+        specialWeaponCount = 0;
+        
         // 모든 투사체 및 폭발물 완전 초기화
         bullets = [];
         enemies = [];
