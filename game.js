@@ -2889,7 +2889,7 @@ function drawUI() {
         drawAirplane(secondPlane.x, secondPlane.y, secondPlane.width, secondPlane.height, 'white');
     }
 
-    // 점수와 레벨 표시
+    // 점수와 레벨 표시 (일정한 간격으로 정리)
     ctx.fillStyle = 'white';
     ctx.font = '20px Arial';
     ctx.textAlign = 'left';
@@ -2915,9 +2915,9 @@ function drawUI() {
         const isBlinking = Math.floor(currentTime / blinkSpeed) % 2 === 0;
         
         if (isBlinking) {
-            // 흰 배경에 빨간 텍스트
+            // 흰 배경에 빨간 텍스트 (텍스트 전체를 덮도록)
             ctx.fillStyle = 'white';
-            ctx.fillRect(15, 265, 150, 25);
+            ctx.fillRect(15, 235, 150, 30);
             ctx.fillStyle = 'red';
         } else {
             // 빨간 텍스트
@@ -2928,7 +2928,7 @@ function drawUI() {
         ctx.fillStyle = 'red';
     }
     ctx.font = 'bold 20px Arial';  // 폰트를 진하게 변경
-    ctx.fillText(`남은 목숨: ${maxLives - collisionCount}`, 20, 280);
+    ctx.fillText(`남은 목숨: ${maxLives - collisionCount}`, 20, 255);
     
     // 보호막 정보 표시
     const shieldedHelicopters = enemies.filter(enemy => 
@@ -2976,7 +2976,7 @@ function drawUI() {
     ctx.fillText('제작/저작권자:Lee.SS.C', canvas.width - 20, canvas.height - 30); 
 
     // 특수 무기 게이지 표시
-    const shieldInfoHeight = 310;
+    const shieldInfoHeight = 280;
     
     // 특수 무기 게이지 및 개수 표시 (첨부 파일과 동일한 방식)
     const chargePercent = Math.floor((specialWeaponCharge / SPECIAL_WEAPON_MAX_CHARGE) * 100);
