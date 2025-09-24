@@ -4560,7 +4560,7 @@ function checkLevelUp() {
         safePlaySound('levelup');
         gameLevel++;
         levelScore = 0;
-        levelUpScore = 3000 * gameLevel; // 레벨업 점수를 3000점으로 변경
+        levelUpScore = 3000; // 항상 3000점으로 고정
         
         // 레벨업 메시지 표시
         const ctx = canvas.getContext('2d');
