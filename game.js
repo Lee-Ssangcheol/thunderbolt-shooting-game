@@ -4433,19 +4433,19 @@ function createBossBullet(boss, angle, pattern = null) {
         [BOSS_PATTERNS.DOUBLE_SPIRAL]: { shape: 'star', color: '#FF69B4' },      // 별 모양, 핫핑크
         [BOSS_PATTERNS.TRIPLE_WAVE]: { shape: 'hexagon', color: '#00FF7F' },     // 육각형 모양, 스프링그린
         [BOSS_PATTERNS.TARGETED_SHOT]: { shape: 'pentagon', color: '#FFD700' },  // 오각형 모양, 골드
-        [BOSS_PATTERNS.BURST_SHOT]: { shape: 'octagon', color: '#9370DB' },      // 팔각형 모양, 미디엄퍼플
+        [BOSS_PATTERNS.BURST_SHOT]: { shape: 'octagon', color: '#FF69B4' },      // 팔각형 모양, 핫핑크 (밝은 핑크)
         
         // 확산 패턴들
         [BOSS_PATTERNS.SPREAD_CIRCLE]: { shape: 'rectangle', color: '#FF6B6B' },    // 사각형 모양, 빨간색
         [BOSS_PATTERNS.SPREAD_CROSS]: { shape: 'triangle', color: '#4ECDC4' },   // 삼각형 모양, 청록색
-        [BOSS_PATTERNS.SPREAD_SPIRAL]: { shape: 'heart', color: '#45B7D1' },      // 하트 모양, 파란색
+        [BOSS_PATTERNS.SPREAD_SPIRAL]: { shape: 'heart', color: '#00BFFF' },      // 하트 모양, 딥스카이블루 (밝은 파란색)
         [BOSS_PATTERNS.SPREAD_WAVE]: { shape: 'flower', color: '#96CEB4' },       // 꽃 모양, 연두색
         [BOSS_PATTERNS.SPREAD_DIAMOND]: { shape: 'diamond', color: '#FFEAA7' },   // 다이아몬드 모양, 연노란색
-        [BOSS_PATTERNS.SPREAD_BURST]: { shape: 'firework', color: '#DDA0DD' },    // 불꽃놀이 모양, 자주색
-        [BOSS_PATTERNS.SPREAD_TARGETED]: { shape: 'star', color: '#98D8C8' },     // 별 모양, 민트색
+        [BOSS_PATTERNS.SPREAD_BURST]: { shape: 'firework', color: '#FF1493' },    // 불꽃놀이 모양, 딥핑크 (밝은 핑크)
+        [BOSS_PATTERNS.SPREAD_TARGETED]: { shape: 'star', color: '#00FF7F' },     // 별 모양, 스프링그린 (밝은 녹색)
         [BOSS_PATTERNS.SPREAD_RANDOM]: { shape: 'hexagon', color: '#F7DC6F' },   // 육각형 모양, 황금색
-        [BOSS_PATTERNS.MEGA_SPREAD]: { shape: 'pentagon', color: '#BB8FCE' },    // 오각형 모양, 라벤더색
-        [BOSS_PATTERNS.CHAOS_SPREAD]: { shape: 'chaos', color: '#85C1E9' }        // 혼돈 모양, 하늘색
+        [BOSS_PATTERNS.MEGA_SPREAD]: { shape: 'pentagon', color: '#FF6347' },    // 오각형 모양, 토마토색 (밝은 오렌지)
+        [BOSS_PATTERNS.CHAOS_SPREAD]: { shape: 'chaos', color: '#00FFFF' }        // 혼돈 모양, 시안 (밝은 청록색)
     };
     
     // 기본값 설정 (패턴이 없거나 매핑되지 않은 경우)
