@@ -3578,6 +3578,15 @@ function handleBullets() {
                 
                 ctx.restore();
             }
+            
+            // 보스 확산탄과 플레이어 충돌 체크
+            if (checkCollision(bullet, player) || 
+                (hasSecondPlane && checkCollision(bullet, secondPlane))) {
+                handleCollision();
+                // 총알 충돌 시 작은 폭발 효과
+                explosions.push(new Explosion(bullet.x, bullet.y, false));
+                return false;
+            }
         } else {
             // 일반 총알 이동
             bullet.y -= bullet.speed;
