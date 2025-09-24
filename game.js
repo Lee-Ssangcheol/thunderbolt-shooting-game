@@ -2612,9 +2612,9 @@ function checkEnemyCollisions(enemy) {
                 // 추가: 플레이어 총알이 보스에 명중 시 발사음도 재생
                 safePlaySound('shoot');
                 
-                // 피격 시간이 전체 출현 시간의 50%를 넘으면 파괴
+                // 피격 시간이 전체 출현 시간의 80%를 넘으면 파괴 (시간 연장)
                 const totalTime = currentTime - enemy.lastUpdateTime;
-                const hitTimeThreshold = BOSS_SETTINGS.SPAWN_INTERVAL * 0.5;
+                const hitTimeThreshold = BOSS_SETTINGS.SPAWN_INTERVAL * 0.8;
                 
                 if (enemy.totalHitTime >= hitTimeThreshold) {
                     console.log('보스 파괴됨 - 피격 시간 초과:', {
@@ -3646,7 +3646,7 @@ const BOSS_SETTINGS = {
     SPEED: 2,           // 보스 이동 속도
     BULLET_SPEED: 5,    // 보스 총알 속도
     PATTERN_INTERVAL: 3000, // 3초로 조정하여 연속 발사 방지
-    SPAWN_INTERVAL: 15000,  // 보스 출현 간격 (15초로 단축)
+    SPAWN_INTERVAL: 30000,  // 보스 출현 간격 (30초로 연장)
     BONUS_SCORE: 500,    // 보스 처치 보너스 점수를 500으로 설정
     PHASE_THRESHOLDS: [  // 페이즈 전환 체력 임계값
         { health: 2250, speed: 2.5, bulletSpeed: 6 },
@@ -3727,6 +3727,11 @@ function createBoss() {
         isBeingHit: false,
         type: ENEMY_TYPES.HELICOPTER,
         rotorAngle: 0,
+        // 좌우 왕복 비행을 위한 속성들
+        moveDirection: Math.random() > 0.5 ? 1 : -1, // 1: 오른쪽, -1: 왼쪽
+        moveSpeed: 1.5, // 좌우 이동 속도
+        moveTimer: 0, // 이동 방향 변경 타이머
+        moveInterval: 2000 + Math.random() * 3000, // 2-5초마다 방향 변경
         rotorSpeed: 0.2,  // 헬리콥터1과 동일한 속도로 설정
         hoverHeight: 150,
         hoverTimer: 0,
@@ -3807,24 +3812,37 @@ function handleBossPattern(boss) {
             boss.timer = currentTime;
         }
     } else if (boss.movePhase === 1) {
-        // 호버링 패턴
+        // 좌우 왕복 비행 패턴
         const timeFactor = (currentTime - boss.timer) / 1000;
         
-        // 기본 호버링 움직임
-        boss.x += Math.sin(timeFactor) * boss.speed;
-        boss.y = boss.hoverHeight + Math.sin(timeFactor * 0.5) * 20;
+        // 좌우 왕복 이동
+        boss.moveTimer += 16; // 대략적인 프레임 시간
+        if (boss.moveTimer >= boss.moveInterval) {
+            boss.moveDirection *= -1; // 방향 반전
+            boss.moveTimer = 0;
+            boss.moveInterval = 2000 + Math.random() * 3000; // 새로운 간격 설정
+        }
         
-        // 랜덤한 오프셋 추가
-        boss.x += Math.sin(timeFactor * boss.randomSpeed + boss.randomAngle) * boss.randomOffsetX * 0.01;
-        boss.y += Math.cos(timeFactor * boss.randomSpeed + boss.randomAngle) * boss.randomOffsetY * 0.01;
+        // 좌우 이동
+        boss.x += boss.moveDirection * boss.moveSpeed;
         
         // 화면 경계 체크 및 반전
-        if (boss.x < 0 || boss.x > canvas.width - boss.width) {
-            boss.randomOffsetX *= -1;
+        if (boss.x <= 0) {
+            boss.x = 0;
+            boss.moveDirection = 1; // 오른쪽으로
+            boss.moveTimer = 0;
+        } else if (boss.x >= canvas.width - boss.width) {
+            boss.x = canvas.width - boss.width;
+            boss.moveDirection = -1; // 왼쪽으로
+            boss.moveTimer = 0;
         }
-        if (boss.y < boss.hoverHeight - 50 || boss.y > boss.hoverHeight + 50) {
-            boss.randomOffsetY *= -1;
-        }
+        
+        // 수직 호버링 (약간의 상하 움직임)
+        boss.y = boss.hoverHeight + Math.sin(timeFactor * 0.3) * 15;
+        
+        // 랜덤한 미세 조정
+        boss.x += Math.sin(timeFactor * boss.randomSpeed + boss.randomAngle) * boss.randomOffsetX * 0.005;
+        boss.y += Math.cos(timeFactor * boss.randomSpeed + boss.randomAngle) * boss.randomOffsetY * 0.005;
         
         // 폭탄 투하
         if (boss.canDropBomb && currentTime - boss.lastBombDrop >= boss.bombDropInterval) {
@@ -4207,7 +4225,7 @@ function drawStar(bullet) {
 }
 
 function drawFlower(bullet) {
-    const size = bullet.width * 1.1; // 크기 증가
+    const size = bullet.width * 1.0; // 크기 조정 (1.1 → 1.0)
     const petals = 6;
     
     ctx.beginPath();
@@ -4226,7 +4244,7 @@ function drawFlower(bullet) {
 }
 
 function drawFirework(bullet) {
-    const size = bullet.width * 1.1; // 크기 증가
+    const size = bullet.width * 1.0; // 크기 조정 (1.1 → 1.0)
     const rays = 8;
     
     for (let i = 0; i < rays; i++) {
@@ -4247,7 +4265,7 @@ function drawFirework(bullet) {
 }
 
 function drawChaos(bullet) {
-    const size = bullet.width * 1.1; // 크기 증가
+    const size = bullet.width * 1.0; // 크기 조정 (1.1 → 1.0)
     
     // 랜덤한 선들
     for (let i = 0; i < 5; i++) {
@@ -4285,7 +4303,7 @@ function drawDiamond(bullet) {
 }
 
 function drawHexagon(bullet) {
-    const size = bullet.width * 1.1; // 크기 증가
+    const size = bullet.width * 1.0; // 크기 조정 (1.1 → 1.0)
     ctx.beginPath();
     for (let i = 0; i < 6; i++) {
         const angle = (i * Math.PI) / 3;
@@ -4299,7 +4317,7 @@ function drawHexagon(bullet) {
 }
 
 function drawOctagon(bullet) {
-    const size = bullet.width * 1.1; // 크기 증가
+    const size = bullet.width * 1.0; // 크기 조정 (1.1 → 1.0)
     ctx.beginPath();
     for (let i = 0; i < 8; i++) {
         const angle = (i * Math.PI) / 4;
@@ -4313,7 +4331,7 @@ function drawOctagon(bullet) {
 }
 
 function drawPentagon(bullet) {
-    const size = bullet.width * 1.1; // 크기 증가
+    const size = bullet.width * 1.0; // 크기 조정 (1.1 → 1.0)
     ctx.beginPath();
     for (let i = 0; i < 5; i++) {
         const angle = (i * Math.PI * 2) / 5;
@@ -4332,7 +4350,7 @@ function drawRectangle(bullet) {
 }
 
 function drawSnowflake(bullet) {
-    const size = bullet.width * 1.2; // 크기 증가
+    const size = bullet.width * 1.0; // 크기 조정 (1.2 → 1.0)
     const centerX = 0;
     const centerY = 0;
     
@@ -4373,7 +4391,7 @@ function drawSnowflake(bullet) {
 }
 
 function drawPinwheel(bullet) {
-    const size = bullet.width * 1.2; // 크기 증가
+    const size = bullet.width * 1.0; // 크기 조정 (1.2 → 1.0)
     const centerX = 0;
     const centerY = 0;
     
