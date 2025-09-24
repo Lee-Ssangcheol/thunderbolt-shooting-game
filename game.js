@@ -3864,15 +3864,15 @@ function handleBossPattern(boss) {
                     BOSS_PATTERNS.SPREAD_DIAMOND
                 ];
             } else {
-                // 4페이즈 (최종): 모든 패턴 사용 (원형 모양 최소화)
+                // 4페이즈 (최종): 모든 패턴 사용 (원형 모양 제외)
                 availablePatterns = [
                     BOSS_PATTERNS.CROSS_SHOT, BOSS_PATTERNS.SPIRAL_SHOT, BOSS_PATTERNS.WAVE_SHOT,
                     BOSS_PATTERNS.DIAMOND_SHOT, BOSS_PATTERNS.RANDOM_SPREAD, BOSS_PATTERNS.DOUBLE_SPIRAL,
                     BOSS_PATTERNS.TRIPLE_WAVE, BOSS_PATTERNS.TARGETED_SHOT, BOSS_PATTERNS.BURST_SHOT,
                     BOSS_PATTERNS.SPREAD_CROSS, BOSS_PATTERNS.SPREAD_SPIRAL, BOSS_PATTERNS.SPREAD_WAVE,
                     BOSS_PATTERNS.SPREAD_DIAMOND, BOSS_PATTERNS.SPREAD_BURST, BOSS_PATTERNS.SPREAD_TARGETED,
-                    BOSS_PATTERNS.SPREAD_RANDOM, BOSS_PATTERNS.MEGA_SPREAD, BOSS_PATTERNS.CHAOS_SPREAD,
-                    BOSS_PATTERNS.CIRCLE_SHOT, BOSS_PATTERNS.SPREAD_CIRCLE // 원형 모양을 마지막에 배치하여 비중 감소
+                    BOSS_PATTERNS.SPREAD_RANDOM, BOSS_PATTERNS.MEGA_SPREAD, BOSS_PATTERNS.CHAOS_SPREAD
+                    // 원형 패턴들 제거하여 다양한 패턴 강화
                 ];
             }
             
@@ -3896,7 +3896,41 @@ function handleBossPattern(boss) {
                 availablePatterns = [BOSS_PATTERNS.CROSS_SHOT]; // 기본 패턴으로 폴백 (원형 모양 제외)
             }
             
-            const selectedPattern = availablePatterns[Math.floor(Math.random() * availablePatterns.length)];
+            // 패턴 가중치 시스템으로 다양성 증가
+            const patternWeights = {
+                // 확산 패턴들에 높은 가중치 부여
+                [BOSS_PATTERNS.SPREAD_CROSS]: 3,
+                [BOSS_PATTERNS.SPREAD_SPIRAL]: 3,
+                [BOSS_PATTERNS.SPREAD_WAVE]: 3,
+                [BOSS_PATTERNS.SPREAD_DIAMOND]: 3,
+                [BOSS_PATTERNS.SPREAD_BURST]: 3,
+                [BOSS_PATTERNS.SPREAD_TARGETED]: 3,
+                [BOSS_PATTERNS.SPREAD_RANDOM]: 3,
+                [BOSS_PATTERNS.MEGA_SPREAD]: 2,
+                [BOSS_PATTERNS.CHAOS_SPREAD]: 2,
+                
+                // 기본 패턴들에 중간 가중치 부여
+                [BOSS_PATTERNS.CROSS_SHOT]: 2,
+                [BOSS_PATTERNS.SPIRAL_SHOT]: 2,
+                [BOSS_PATTERNS.WAVE_SHOT]: 2,
+                [BOSS_PATTERNS.DIAMOND_SHOT]: 2,
+                [BOSS_PATTERNS.RANDOM_SPREAD]: 2,
+                [BOSS_PATTERNS.DOUBLE_SPIRAL]: 2,
+                [BOSS_PATTERNS.TRIPLE_WAVE]: 2,
+                [BOSS_PATTERNS.TARGETED_SHOT]: 2,
+                [BOSS_PATTERNS.BURST_SHOT]: 2
+            };
+            
+            // 가중치 기반 패턴 선택
+            const weightedPatterns = [];
+            availablePatterns.forEach(pattern => {
+                const weight = patternWeights[pattern] || 1;
+                for (let i = 0; i < weight; i++) {
+                    weightedPatterns.push(pattern);
+                }
+            });
+            
+            const selectedPattern = weightedPatterns[Math.floor(Math.random() * weightedPatterns.length)];
             
             // 선택된 패턴을 이전 패턴으로 저장
             boss.lastPattern = selectedPattern;
