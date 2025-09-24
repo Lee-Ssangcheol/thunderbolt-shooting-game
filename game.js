@@ -506,11 +506,12 @@ let enemies = [];         // 적 배열
 let explosions = [];      // 폭발 효과 배열
 let gameLevel = 1;        // 게임 레벨
 let levelScore = 0;       // 레벨 점수
-let levelUpScore = 1000;  // 레벨업에 필요한 점수
+let levelUpScore = 3000;  // 레벨업에 필요한 점수
 let score = 0;           // 현재 점수
 let highScore = 0;       // 최고 점수 (초기값 0으로 설정)
 let hasSecondPlane = false;  // 두 번째 비행기 보유 여부
 let secondPlaneTimer = 0;    // 두 번째 비행기 타이머
+let lastSecondPlaneScore = 0; // 마지막으로 추가 비행기가 등장한 점수
 let isPaused = false;     // 일시정지 상태
 let collisionCount = 0;   // 충돌 횟수
 let isGameOver = false;   // 게임 오버 상태
@@ -1155,6 +1156,7 @@ function restartGame() {
     shieldedHelicopterDestroyed = 0;  // 보호막 헬리콥터 파괴 카운터 초기화
     isGameOver = false;
     hasSecondPlane = false;
+    lastSecondPlaneScore = 0;
     lifeWarningBlinkTimer = 0;  // 목숨 경고 깜빡임 타이머 초기화
     
     // 목숨 추가 메시지 초기화
@@ -2910,12 +2912,14 @@ function drawUI() {
     ctx.textAlign = 'left';
     ctx.fillText(`점수: ${score}`, 20, 40);
     ctx.fillText(`레벨: ${gameLevel} (${getDifficultyName(gameLevel)})`, 20, 70);
-    ctx.fillText(`다음 레벨까지: ${Math.max(0, levelUpScore - levelScore)}`, 20, 100);
+    ctx.fillText(`다음 레벨까지: ${Math.max(0, levelUpScore - levelScore)}점`, 20, 100);
     ctx.fillText(`최고 점수: ${highScore}`, 20, 130);
     ctx.fillText(`최고 점수 리셋: R키`, 20, 160);
     if (!hasSecondPlane) {
-        const nextPlaneScore = Math.ceil(score / 2000) * 2000;  // 8000 * gameLevel에서 2000으로 변경
-        ctx.fillText(`다음 추가 비행기까지: ${nextPlaneScore - score}점`, 20, 190);
+        // 다음 추가 비행기까지 남은 점수 계산
+        const nextPlaneScore = Math.ceil(score / 2000) * 2000;
+        const remainingScore = Math.max(0, nextPlaneScore - score);
+        ctx.fillText(`다음 추가 비행기까지: ${remainingScore}점`, 20, 190);
     } else {
         const remainingTime = Math.ceil((10000 - (Date.now() - secondPlaneTimer)) / 1000);
         ctx.fillText(`추가 비행기 남은 시간: ${remainingTime}초`, 20, 190);
@@ -3323,8 +3327,10 @@ function updateScore(points) {
 
 // 두 번째 비행기 처리 함수 추가
 function handleSecondPlane() {
-    if (score >= 2000 && score % 2000 === 0 && !hasSecondPlane) {  // 10000에서 2000으로 변경
+    // 추가 비행기가 아직 등장하지 않았고, 점수가 2000점 이상이며 이전에 등장한 점수보다 2000점 이상 높을 때 등장
+    if (score >= 2000 && !hasSecondPlane && score >= lastSecondPlaneScore + 2000) {
         hasSecondPlane = true;
+        lastSecondPlaneScore = score; // 현재 점수를 마지막 등장 점수로 설정
         secondPlane.x = player.x - 60;
         secondPlane.y = player.y;
         secondPlaneTimer = Date.now(); // 타이머 시작
@@ -4493,7 +4499,7 @@ function checkLevelUp() {
         safePlaySound('levelup');
         gameLevel++;
         levelScore = 0;
-        levelUpScore = 800 * gameLevel; // 1000에서 800으로 감소
+        levelUpScore = 3000 * gameLevel; // 레벨업 점수를 3000점으로 변경
         
         // 레벨업 메시지 표시
         const ctx = canvas.getContext('2d');
