@@ -2131,8 +2131,8 @@ function gameLoop() {
         const currentTime = Date.now();
         if (!bossActive && !isBossActive) {
             const timeSinceLastBoss = currentTime - lastBossSpawnTime;
-            // 레벨에 따라 보스 출현 점수 조건 조정 (더 쉽게)
-            const bossSpawnScore = Math.max(300, gameLevel * 500); // 레벨당 500점씩 증가
+            // 레벨에 따라 보스 출현 점수 조건 조정 (더욱 빠르게)
+            const bossSpawnScore = Math.max(50, gameLevel * 100); // 레벨당 100점씩 증가, 최소 50점
             if (timeSinceLastBoss >= BOSS_SETTINGS.SPAWN_INTERVAL && score >= bossSpawnScore) {
                 console.log(`보스 생성 조건 확인: 점수 ${score}/${bossSpawnScore}, 레벨 ${gameLevel}, 시간: ${timeSinceLastBoss}/${BOSS_SETTINGS.SPAWN_INTERVAL}`);
                 createBoss();
@@ -2789,27 +2789,10 @@ function handleBulletFiring() {
         lastFireTime = currentTime;
         canFire = false;  // 발사 후 즉시 발사 불가 상태로 변경
         
-        // 일반 총알 발사 (한 발씩)
-        const bullet = {
-            x: player.x + player.width/2, // 기본값에서
-            y: player.y,                  // 기본값에서
-            width: currentBulletSize,
-            height: currentBulletSize * 2,
-            speed: bulletSpeed,
-            damage: 100 * damageMultiplier,
-            isBossBullet: false,
-            isSpecial: false
-        };
-        // 머리 끝 중앙에서 발사되도록 조정
-        bullet.x = player.x + player.width/2;
-        bullet.y = player.y;
-        bullets.push(bullet);
-        
-        // 두 번째 비행기 발사
-        if (hasSecondPlane) {
+            // 일반 총알 발사 (한 발씩)
             const bullet = {
-                x: secondPlane.x + secondPlane.width/2,
-                y: secondPlane.y,
+                x: player.x + player.width/2, // 기본값에서
+                y: player.y,                  // 기본값에서
                 width: currentBulletSize,
                 height: currentBulletSize * 2,
                 speed: bulletSpeed,
@@ -2817,7 +2800,24 @@ function handleBulletFiring() {
                 isBossBullet: false,
                 isSpecial: false
             };
+            // 머리 끝 중앙에서 발사되도록 조정
+            bullet.x = player.x + player.width/2;
+            bullet.y = player.y;
             bullets.push(bullet);
+        
+        // 두 번째 비행기 발사
+        if (hasSecondPlane) {
+                    const bullet = {
+                        x: secondPlane.x + secondPlane.width/2,
+                        y: secondPlane.y,
+                        width: currentBulletSize,
+                        height: currentBulletSize * 2,
+                        speed: bulletSpeed,
+                        damage: 100 * damageMultiplier,
+                        isBossBullet: false,
+                        isSpecial: false
+                    };
+                    bullets.push(bullet);
         }
         
         // 발사음 재생 (볼륨 조정)
@@ -3003,8 +3003,8 @@ function drawUI() {
     const displayCount = hasSpecialWeapon ? specialWeaponCount : 0;
     
     // 깜빡이는 효과를 위한 시간 계산 (특수무기가 있을 때만)
-    const blinkSpeed = 500; // 깜빡임 속도 (밀리초)
-    const currentTime = Date.now();
+        const blinkSpeed = 500; // 깜빡임 속도 (밀리초)
+        const currentTime = Date.now();
     const isRed = hasSpecialWeapon && Math.floor(currentTime / blinkSpeed) % 2 === 0;
     
     // 배경색 설정 (게이지 바) - 원상복구
@@ -3025,7 +3025,7 @@ function drawUI() {
     } else {
         ctx.strokeStyle = 'cyan';  // 원래 색상 복구
     }
-    ctx.lineWidth = 2;
+        ctx.lineWidth = 2;
     ctx.strokeRect(10, shieldInfoHeight, 200, 20);
     
     // 게이지 바 위에 텍스트 표시 (충전률과 보유 개수) - 원상복구
@@ -3034,11 +3034,11 @@ function drawUI() {
     } else {
         ctx.fillStyle = 'cyan';  // 원래 색상 복구
     }
-    ctx.font = 'bold 16px Arial';
-    ctx.textAlign = 'center';
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'center';
     const displayText = `특수무기: ${chargePercent}%(보유:${displayCount}/5개)`;
     ctx.fillText(displayText, 110, shieldInfoHeight + 15);
-    
+        
     // 준비 완료 메시지 (특수무기가 있을 때만)
     if (hasSpecialWeapon) {
         // 준비 완료 메시지 배경
@@ -3128,7 +3128,7 @@ function drawUI() {
     if (!bossActive && !isBossActive) {
         const currentTime = Date.now();
         const timeSinceLastBoss = currentTime - lastBossSpawnTime;
-        const bossSpawnScore = Math.max(300, gameLevel * 500);
+        const bossSpawnScore = Math.max(50, gameLevel * 100);
         
         ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
         ctx.font = '14px Arial';
@@ -3306,8 +3306,8 @@ function updateScore(points) {
     levelScore += points;
     
     // 특수 무기 게이지 증가 (첨부 파일과 동일한 방식)
-    specialWeaponCharge += points;
-    if (specialWeaponCharge >= SPECIAL_WEAPON_MAX_CHARGE) {
+        specialWeaponCharge += points;
+        if (specialWeaponCharge >= SPECIAL_WEAPON_MAX_CHARGE) {
         const newWeapons = Math.floor(specialWeaponCharge / SPECIAL_WEAPON_MAX_CHARGE);
         specialWeaponCount += newWeapons;
         // 최대 보유 개수 5개로 제한
@@ -3645,8 +3645,8 @@ const BOSS_SETTINGS = {
     DAMAGE: 50,          // 보스 총알 데미지
     SPEED: 2,           // 보스 이동 속도
     BULLET_SPEED: 5,    // 보스 총알 속도
-    PATTERN_INTERVAL: 2000, // 2초로 조정하여 더 활발한 공격
-    SPAWN_INTERVAL: 30000,  // 보스 출현 간격 (30초로 연장)
+    PATTERN_INTERVAL: 4000, // 4초로 조정하여 확산탄과 균형 맞춤
+    SPAWN_INTERVAL: 15000,  // 보스 출현 간격 (15초로 단축)
     BONUS_SCORE: 500,    // 보스 처치 보너스 점수를 500으로 설정
     PHASE_THRESHOLDS: [  // 페이즈 전환 체력 임계값 (15초 체공에 맞게 조정)
         { health: 1125, speed: 2.5, bulletSpeed: 6 },
@@ -3699,7 +3699,7 @@ function createBoss() {
     
     // 보스 헬리콥터 객체 생성
     const boss = {
-        x: Math.random() * (canvas.width - 68),
+        x: canvas.width / 2 - 34, // 화면 중앙에서 시작
         y: -68,  // 화면 상단에서 시작
         width: 68,
         height: 68,
@@ -3727,9 +3727,9 @@ function createBoss() {
         rotorAngle: 0,
         // 좌우 왕복 비행을 위한 속성들
         moveDirection: Math.random() > 0.5 ? 1 : -1, // 1: 오른쪽, -1: 왼쪽
-        moveSpeed: 2.0, // 좌우 이동 속도 증가
+        moveSpeed: 2.0, // 좌우 이동 속도 조정
         moveTimer: 0, // 이동 방향 변경 타이머
-        moveInterval: 1000 + Math.random() * 1000, // 1-2초마다 방향 변경 (더 빠른 전환)
+        moveInterval: 2000 + Math.random() * 2000, // 2-4초마다 방향 변경 (부드러운 전환)
         rotorSpeed: 0.2,  // 헬리콥터1과 동일한 속도로 설정
         hoverHeight: 150,
         hoverTimer: 0,
@@ -3749,19 +3749,24 @@ function createBoss() {
     setTimeout(() => {
         if (bossActive && enemies.includes(boss)) {
             console.log('보스 등장 직후 확산탄 발사');
-            bossFireSpreadShot(boss);
+            bossFireSpreadShot(boss, null); // 첫 발사는 이전 패턴이 없음
         }
     }, 1000);
     
-    // 보스 등장 후 주기적인 확산탄 발사 (3초마다)
+    // 보스 등장 후 주기적인 확산탄 발사 (2초 간격으로 발사)
+    let spreadShotCount = 0;
+    let lastSpreadPattern = null; // 마지막 발사 패턴 저장
     const spreadShotInterval = setInterval(() => {
         if (bossActive && enemies.includes(boss) && !bossDestroyed) {
-            console.log('보스 주기적 확산탄 발사');
-            bossFireSpreadShot(boss);
+            spreadShotCount++;
+            console.log(`보스 주기적 확산탄 발사 (${spreadShotCount}번째)`);
+            bossFireSpreadShot(boss, lastSpreadPattern);
+            // 현재 패턴을 다음 발사 시 참조용으로 저장
+            lastSpreadPattern = boss.currentSpreadPattern || null;
         } else {
             clearInterval(spreadShotInterval);
         }
-    }, 3000);
+    }, 5000); // 5초마다 발사
 }
 
 // 보스 패턴 처리 함수 수정
@@ -3821,27 +3826,42 @@ function handleBossPattern(boss) {
         boss.x += dx * 0.05;
         boss.y += dy * 0.05;
         
-        // 중앙에 도달하면 다음 페이즈로
-        if (Math.abs(dx) < 5 && Math.abs(dy) < 5) {
+        // 중앙에 도달하면 다음 페이즈로 (조건 완화)
+        if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
             boss.movePhase = 1;
             boss.timer = currentTime;
             boss.moveTimer = 0;
             boss.moveDirection = Math.random() > 0.5 ? 1 : -1;
+            console.log('보스 이동 페이즈 1로 전환됨');
         }
     } else if (boss.movePhase === 1) {
         // 활발한 좌우 왕복 비행 패턴
         const timeFactor = (currentTime - boss.timer) / 1000;
         
-        // 더 빠른 방향 전환 (1-2초마다)
+        // 부드러운 방향 전환 (2-4초마다)
         boss.moveTimer += 16;
         if (boss.moveTimer >= boss.moveInterval) {
             boss.moveDirection *= -1;
             boss.moveTimer = 0;
-            boss.moveInterval = 1000 + Math.random() * 1000; // 1-2초마다 방향 변경
+            boss.moveInterval = 2000 + Math.random() * 2000; // 2-4초마다 방향 변경
         }
         
-        // 더 빠른 좌우 이동
-        boss.x += boss.moveDirection * boss.moveSpeed * 1.5;
+        // 부드러운 좌우 이동 (속도 조정)
+        const moveAmount = boss.moveDirection * boss.moveSpeed * 1.2;
+        boss.x += moveAmount;
+        
+        // 디버깅: 보스 이동 상태 로그
+        if (currentTime % 2000 < 16) { // 2초마다 로그 출력
+            console.log('보스 이동 상태:', {
+                movePhase: boss.movePhase,
+                moveDirection: boss.moveDirection,
+                moveSpeed: boss.moveSpeed,
+                moveAmount: moveAmount,
+                bossX: boss.x,
+                moveTimer: boss.moveTimer,
+                moveInterval: boss.moveInterval
+            });
+        }
         
         // 화면 경계 체크 - 화면 밖으로 나가지 않도록
         const margin = 20; // 화면 가장자리에서 20픽셀 여백
@@ -3858,9 +3878,22 @@ function handleBossPattern(boss) {
         // 수직 호버링 (더 활발한 상하 움직임)
         boss.y = boss.hoverHeight + Math.sin(timeFactor * 0.5) * 25;
         
-        // 추가적인 랜덤 움직임으로 더 역동적으로
-        boss.x += Math.sin(timeFactor * 2 + boss.randomAngle) * 0.8;
-        boss.y += Math.cos(timeFactor * 1.5 + boss.randomAngle) * 0.5;
+        // 추가적인 랜덤 움직임으로 더 역동적으로 (부드럽게 조정)
+        boss.x += Math.sin(timeFactor * 1.5 + boss.randomAngle) * 0.5;
+        boss.y += Math.cos(timeFactor * 1.2 + boss.randomAngle) * 0.3;
+        
+        // 보스가 항상 움직이도록 보장 (최소 이동량)
+        if (Math.abs(boss.x - (boss.lastX || boss.x)) < 0.1) {
+            boss.x += boss.moveDirection * 1.0; // 최소 이동량 보장 (증가)
+            console.log('보스 강제 이동 적용:', boss.x);
+        }
+        boss.lastX = boss.x;
+        
+        // 추가 보장: 보스가 화면 중앙에 머물러 있지 않도록
+        const centerX = canvas.width / 2;
+        if (Math.abs(boss.x - centerX) < 50) {
+            boss.x += boss.moveDirection * 2.0; // 중앙에서 벗어나도록 강제 이동
+        }
         
         // 최종 화면 경계 체크 (안전장치)
         boss.x = Math.max(20, Math.min(boss.x, canvas.width - boss.width - 20));
@@ -4457,17 +4490,25 @@ function createBossBullet(boss, angle, pattern = null) {
         [BOSS_PATTERNS.TARGETED_SHOT]: { shape: 'pentagon', color: '#FFD700' },  // 오각형 모양, 골드
         [BOSS_PATTERNS.BURST_SHOT]: { shape: 'octagon', color: '#FF69B4' },      // 팔각형 모양, 핫핑크 (밝은 핑크)
         
-        // 확산 패턴들
-        [BOSS_PATTERNS.SPREAD_CIRCLE]: { shape: 'rectangle', color: '#FF6B6B' },    // 사각형 모양, 빨간색
-        [BOSS_PATTERNS.SPREAD_CROSS]: { shape: 'triangle', color: '#4ECDC4' },   // 삼각형 모양, 청록색
-        [BOSS_PATTERNS.SPREAD_SPIRAL]: { shape: 'heart', color: '#00BFFF' },      // 하트 모양, 딥스카이블루 (밝은 파란색)
-        [BOSS_PATTERNS.SPREAD_WAVE]: { shape: 'flower', color: '#96CEB4' },       // 꽃 모양, 연두색
-        [BOSS_PATTERNS.SPREAD_DIAMOND]: { shape: 'diamond', color: '#FFEAA7' },   // 다이아몬드 모양, 연노란색
-        [BOSS_PATTERNS.SPREAD_BURST]: { shape: 'firework', color: '#FF1493' },    // 불꽃놀이 모양, 딥핑크 (밝은 핑크)
-        [BOSS_PATTERNS.SPREAD_TARGETED]: { shape: 'star', color: '#00FF7F' },     // 별 모양, 스프링그린 (밝은 녹색)
-        [BOSS_PATTERNS.SPREAD_RANDOM]: { shape: 'hexagon', color: '#F7DC6F' },   // 육각형 모양, 황금색
-        [BOSS_PATTERNS.MEGA_SPREAD]: { shape: 'pentagon', color: '#FF6347' },    // 오각형 모양, 토마토색 (밝은 오렌지)
-        [BOSS_PATTERNS.CHAOS_SPREAD]: { shape: 'chaos', color: '#00FFFF' }        // 혼돈 모양, 시안 (밝은 청록색)
+        // 확산 패턴들 (모두 밝은 색상으로 수정)
+        [BOSS_PATTERNS.SPREAD_CIRCLE]: { shape: 'rectangle', color: '#FF8888' },    // 사각형 모양, 밝은 빨간색
+        [BOSS_PATTERNS.SPREAD_CROSS]: { shape: 'triangle', color: '#66DDDD' },   // 삼각형 모양, 밝은 청록색
+        [BOSS_PATTERNS.SPREAD_SPIRAL]: { shape: 'heart', color: '#66CCFF' },      // 하트 모양, 밝은 하늘색
+        [BOSS_PATTERNS.SPREAD_WAVE]: { shape: 'flower', color: '#AADDAA' },       // 꽃 모양, 밝은 연두색
+        [BOSS_PATTERNS.SPREAD_DIAMOND]: { shape: 'diamond', color: '#FFFFAA' },   // 다이아몬드 모양, 밝은 노란색
+        [BOSS_PATTERNS.SPREAD_BURST]: { shape: 'firework', color: '#FF66CC' },    // 불꽃놀이 모양, 밝은 핑크색
+        [BOSS_PATTERNS.SPREAD_TARGETED]: { shape: 'star', color: '#66FF99' },     // 별 모양, 밝은 녹색
+        [BOSS_PATTERNS.SPREAD_RANDOM]: { shape: 'hexagon', color: '#FFDD66' },   // 육각형 모양, 밝은 황금색
+        [BOSS_PATTERNS.MEGA_SPREAD]: { shape: 'pentagon', color: '#FF8866' },    // 오각형 모양, 밝은 오렌지색
+        [BOSS_PATTERNS.CHAOS_SPREAD]: { shape: 'chaos', color: '#66FFFF' },        // 혼돈 모양, 밝은 시안색
+        
+        // 확산탄 전용 패턴들 (고유한 모양과 밝은 색상)
+        'spread_circle': { shape: 'circle', color: '#FF6666' },      // 밝은 빨간색
+        'spread_spiral': { shape: 'triangle', color: '#00FFAA' },    // 녹청색 (밝은 청록색)
+        'spread_wave': { shape: 'diamond', color: '#FFFF66' },       // 밝은 노란색
+        'spread_burst': { shape: 'star', color: '#FF66FF' },         // 밝은 자홍색
+        'spread_diamond': { shape: 'diamond', color: '#66FF66' },     // 밝은 녹색
+        'spread_cross': { shape: 'square', color: '#66FFFF' }        // 밝은 시안색
     };
     
     // 기본값 설정 (패턴이 없거나 매핑되지 않은 경우)
@@ -4477,8 +4518,8 @@ function createBossBullet(boss, angle, pattern = null) {
     const bullet = {
         x: boss.x + boss.width/2,
         y: boss.y + boss.height/2,
-        width: 18,  // 크기 증가 (12 → 18)
-        height: 18, // 크기 증가 (12 → 18)
+        width: 12,  // 크기 조정 (18 → 12)
+        height: 12, // 크기 조정 (18 → 12)
         speed: boss.bulletSpeed,
         angle: angle,
         isBossBullet: true,
@@ -5720,72 +5761,76 @@ function drawMissileTrail(missile) {
     drawTaurusMissile(ctx, missile.x, missile.y, missile.width, missile.height, 0);
 }
 
-function bossFireSpreadShot(boss) {
-    // 랜덤한 확산탄 패턴 선택
+function bossFireSpreadShot(boss, lastPattern = null) {
+    // 랜덤한 확산탄 패턴 선택 (이전 패턴과 중복되지 않도록)
     const patterns = [
-        'circle',      // 원형 확산
-        'spiral',      // 나선형 확산
-        'wave',        // 파도형 확산
-        'burst',       // 연발 확산
-        'diamond',     // 다이아몬드 확산
-        'cross'        // 십자 확산
+        'spread_circle',      // 확산 원형
+        'spread_spiral',      // 확산 나선형
+        'spread_wave',        // 확산 파도형
+        'spread_burst',       // 확산 연발
+        'spread_diamond',     // 확산 다이아몬드
+        'spread_cross'        // 확산 십자
     ];
     
-    const selectedPattern = patterns[Math.floor(Math.random() * patterns.length)];
-    const pattern = boss.currentPattern || BOSS_PATTERNS.BASIC;
+    // 이전 패턴과 다른 패턴만 선택 가능하도록 필터링
+    const availablePatterns = patterns.filter(pattern => pattern !== lastPattern);
+    const selectedPattern = availablePatterns[Math.floor(Math.random() * availablePatterns.length)];
     
-    console.log(`보스 확산탄 패턴: ${selectedPattern}`);
+    // 현재 선택된 패턴을 보스 객체에 저장
+    boss.currentSpreadPattern = selectedPattern;
+    
+    console.log(`보스 확산탄 패턴: ${selectedPattern} (이전: ${lastPattern || '없음'})`);
     
     switch(selectedPattern) {
-        case 'circle':
-            // 원형 확산 - 16발
+        case 'spread_circle':
+            // 확산 원형 - 16발
             for (let i = 0; i < 16; i++) {
                 const angle = (i * Math.PI * 2) / 16;
-                createBossBullet(boss, angle, pattern);
+                createBossBullet(boss, angle, selectedPattern);
             }
             break;
             
-        case 'spiral':
-            // 나선형 확산 - 회전하면서 발사
+        case 'spread_spiral':
+            // 확산 나선형 - 회전하면서 발사
             for (let i = 0; i < 20; i++) {
                 const angle = (i * Math.PI / 10) + (boss.rotorAngle || 0);
-                createBossBullet(boss, angle, pattern);
+                createBossBullet(boss, angle, selectedPattern);
             }
             break;
             
-        case 'wave':
-            // 파도형 확산 - 사인파 형태
+        case 'spread_wave':
+            // 확산 파도형 - 사인파 형태
             for (let i = 0; i < 15; i++) {
                 const baseAngle = (i * Math.PI / 7.5);
                 const waveOffset = Math.sin(i * 0.4) * 0.5;
                 const angle = baseAngle + waveOffset;
-                createBossBullet(boss, angle, pattern);
+                createBossBullet(boss, angle, selectedPattern);
             }
             break;
             
-        case 'burst':
-            // 연발 확산 - 빠른 속도로 연속 발사
+        case 'spread_burst':
+            // 확산 연발 - 빠른 속도로 연속 발사
             for (let i = 0; i < 8; i++) {
                 setTimeout(() => {
                     const angle = Math.random() * Math.PI * 2;
-                    createBossBullet(boss, angle, pattern);
+                    createBossBullet(boss, angle, selectedPattern);
                 }, i * 50); // 50ms 간격으로 연속 발사
             }
             break;
             
-        case 'diamond':
-            // 다이아몬드 확산 - 다이아몬드 형태
+        case 'spread_diamond':
+            // 확산 다이아몬드 - 다이아몬드 형태
             for (let i = 0; i < 12; i++) {
                 const angle = (i * Math.PI) / 6;
-                createBossBullet(boss, angle, pattern);
+                createBossBullet(boss, angle, selectedPattern);
             }
             break;
             
-        case 'cross':
-            // 십자 확산 - 4방향으로 확산
+        case 'spread_cross':
+            // 확산 십자 - 4방향으로 확산
             for (let i = 0; i < 8; i++) {
                 const angle = (i * Math.PI) / 4;
-                createBossBullet(boss, angle, pattern);
+                createBossBullet(boss, angle, selectedPattern);
             }
             break;
     }
