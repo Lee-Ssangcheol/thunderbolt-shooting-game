@@ -3708,8 +3708,6 @@ function createBoss() {
         lastPattern: null, // 이전 패턴 저장용
         angle: 0,
         movePhase: 0,
-        targetX: canvas.width / 2 - 34,
-        targetY: 68,
         phase: 0,
         patternTimer: currentTime,
         bulletSpeed: BOSS_SETTINGS.BULLET_SPEED,
@@ -3729,9 +3727,9 @@ function createBoss() {
         rotorAngle: 0,
         // 좌우 왕복 비행을 위한 속성들
         moveDirection: Math.random() > 0.5 ? 1 : -1, // 1: 오른쪽, -1: 왼쪽
-        moveSpeed: 1.5, // 좌우 이동 속도
+        moveSpeed: 2.0, // 좌우 이동 속도 증가
         moveTimer: 0, // 이동 방향 변경 타이머
-        moveInterval: 2000 + Math.random() * 3000, // 2-5초마다 방향 변경
+        moveInterval: 1000 + Math.random() * 1000, // 1-2초마다 방향 변경 (더 빠른 전환)
         rotorSpeed: 0.2,  // 헬리콥터1과 동일한 속도로 설정
         hoverHeight: 150,
         hoverTimer: 0,
@@ -3804,45 +3802,59 @@ function handleBossPattern(boss) {
     
     // 보스 이동 패턴
     if (boss.movePhase === 0) {
-        // 초기 진입 - 비규칙적인 경로로 진입
-        boss.y += boss.speed;
-        boss.x += Math.sin(currentTime / 500) * 2;
-        if (boss.y >= boss.hoverHeight) {
+        // 초기 진입 - 화면 중앙으로 이동
+        const centerX = canvas.width / 2 - boss.width / 2;
+        const dx = centerX - boss.x;
+        const dy = boss.hoverHeight - boss.y;
+        
+        // 부드럽게 중앙으로 이동
+        boss.x += dx * 0.05;
+        boss.y += dy * 0.05;
+        
+        // 중앙에 도달하면 다음 페이즈로
+        if (Math.abs(dx) < 5 && Math.abs(dy) < 5) {
             boss.movePhase = 1;
             boss.timer = currentTime;
+            boss.moveTimer = 0;
+            boss.moveDirection = Math.random() > 0.5 ? 1 : -1;
         }
     } else if (boss.movePhase === 1) {
-        // 좌우 왕복 비행 패턴
+        // 활발한 좌우 왕복 비행 패턴
         const timeFactor = (currentTime - boss.timer) / 1000;
         
-        // 좌우 왕복 이동
-        boss.moveTimer += 16; // 대략적인 프레임 시간
+        // 더 빠른 방향 전환 (1-2초마다)
+        boss.moveTimer += 16;
         if (boss.moveTimer >= boss.moveInterval) {
-            boss.moveDirection *= -1; // 방향 반전
+            boss.moveDirection *= -1;
             boss.moveTimer = 0;
-            boss.moveInterval = 2000 + Math.random() * 3000; // 새로운 간격 설정
+            boss.moveInterval = 1000 + Math.random() * 1000; // 1-2초마다 방향 변경
         }
         
-        // 좌우 이동
-        boss.x += boss.moveDirection * boss.moveSpeed;
+        // 더 빠른 좌우 이동
+        boss.x += boss.moveDirection * boss.moveSpeed * 1.5;
         
-        // 화면 경계 체크 및 반전
-        if (boss.x <= 0) {
-            boss.x = 0;
+        // 화면 경계 체크 - 화면 밖으로 나가지 않도록
+        const margin = 20; // 화면 가장자리에서 20픽셀 여백
+        if (boss.x <= margin) {
+            boss.x = margin;
             boss.moveDirection = 1; // 오른쪽으로
             boss.moveTimer = 0;
-        } else if (boss.x >= canvas.width - boss.width) {
-            boss.x = canvas.width - boss.width;
+        } else if (boss.x >= canvas.width - boss.width - margin) {
+            boss.x = canvas.width - boss.width - margin;
             boss.moveDirection = -1; // 왼쪽으로
             boss.moveTimer = 0;
         }
         
-        // 수직 호버링 (약간의 상하 움직임)
-        boss.y = boss.hoverHeight + Math.sin(timeFactor * 0.3) * 15;
+        // 수직 호버링 (더 활발한 상하 움직임)
+        boss.y = boss.hoverHeight + Math.sin(timeFactor * 0.5) * 25;
         
-        // 랜덤한 미세 조정
-        boss.x += Math.sin(timeFactor * boss.randomSpeed + boss.randomAngle) * boss.randomOffsetX * 0.005;
-        boss.y += Math.cos(timeFactor * boss.randomSpeed + boss.randomAngle) * boss.randomOffsetY * 0.005;
+        // 추가적인 랜덤 움직임으로 더 역동적으로
+        boss.x += Math.sin(timeFactor * 2 + boss.randomAngle) * 0.8;
+        boss.y += Math.cos(timeFactor * 1.5 + boss.randomAngle) * 0.5;
+        
+        // 최종 화면 경계 체크 (안전장치)
+        boss.x = Math.max(20, Math.min(boss.x, canvas.width - boss.width - 20));
+        boss.y = Math.max(50, Math.min(boss.y, canvas.height - boss.height - 50));
         
         // 폭탄 투하
         if (boss.canDropBomb && currentTime - boss.lastBombDrop >= boss.bombDropInterval) {
