@@ -2603,8 +2603,8 @@ function checkEnemyCollisions(enemy) {
                     false
                 ));
                 
-                // 체력 감소 (각 총알당 100의 데미지)
-                enemy.health = Math.max(0, enemy.health - 100);
+                // 체력 감소 (각 총알당 50의 데미지로 조정하여 15초 체공에 맞게)
+                enemy.health = Math.max(0, enemy.health - 50);
                 bossHealth = enemy.health;
                 
                 // 보스 피격음 재생
@@ -2612,9 +2612,9 @@ function checkEnemyCollisions(enemy) {
                 // 추가: 플레이어 총알이 보스에 명중 시 발사음도 재생
                 safePlaySound('shoot');
                 
-                // 피격 시간이 전체 출현 시간의 80%를 넘으면 파괴 (시간 연장)
+                // 피격 시간이 15초를 넘으면 파괴 (15초 체공에 맞게 조정)
                 const totalTime = currentTime - enemy.lastUpdateTime;
-                const hitTimeThreshold = BOSS_SETTINGS.SPAWN_INTERVAL * 0.8;
+                const hitTimeThreshold = 15000; // 15초로 고정
                 
                 if (enemy.totalHitTime >= hitTimeThreshold) {
                     console.log('보스 파괴됨 - 피격 시간 초과:', {
@@ -3641,17 +3641,17 @@ function handleBullets() {
 
 // 보스 관련 상수 추가
 const BOSS_SETTINGS = {
-    HEALTH: 3000,        // 체력 3000으로 상향
+    HEALTH: 1500,        // 체력 1500으로 조정 (15초 체공에 맞게)
     DAMAGE: 50,          // 보스 총알 데미지
     SPEED: 2,           // 보스 이동 속도
     BULLET_SPEED: 5,    // 보스 총알 속도
-    PATTERN_INTERVAL: 3000, // 3초로 조정하여 연속 발사 방지
+    PATTERN_INTERVAL: 2000, // 2초로 조정하여 더 활발한 공격
     SPAWN_INTERVAL: 30000,  // 보스 출현 간격 (30초로 연장)
     BONUS_SCORE: 500,    // 보스 처치 보너스 점수를 500으로 설정
-    PHASE_THRESHOLDS: [  // 페이즈 전환 체력 임계값
-        { health: 2250, speed: 2.5, bulletSpeed: 6 },
-        { health: 1500, speed: 3, bulletSpeed: 7 },
-        { health: 750, speed: 3.5, bulletSpeed: 8 }
+    PHASE_THRESHOLDS: [  // 페이즈 전환 체력 임계값 (15초 체공에 맞게 조정)
+        { health: 1125, speed: 2.5, bulletSpeed: 6 },
+        { health: 750, speed: 3, bulletSpeed: 7 },
+        { health: 375, speed: 3.5, bulletSpeed: 8 }
     ]
 };
 
@@ -3752,6 +3752,16 @@ function createBoss() {
             bossFireSpreadShot(boss);
         }
     }, 1000);
+    
+    // 보스 등장 후 주기적인 확산탄 발사 (3초마다)
+    const spreadShotInterval = setInterval(() => {
+        if (bossActive && enemies.includes(boss) && !bossDestroyed) {
+            console.log('보스 주기적 확산탄 발사');
+            bossFireSpreadShot(boss);
+        } else {
+            clearInterval(spreadShotInterval);
+        }
+    }, 3000);
 }
 
 // 보스 패턴 처리 함수 수정
@@ -5711,11 +5721,73 @@ function drawMissileTrail(missile) {
 }
 
 function bossFireSpreadShot(boss) {
-    const spreadCount = 12; // 한 번에 12발
-    const pattern = boss.currentPattern || BOSS_PATTERNS.BASIC; // 보스의 현재 패턴 사용
-    for (let i = 0; i < spreadCount; i++) {
-        const angle = (i * 2 * Math.PI) / spreadCount;
-        createBossBullet(boss, angle, pattern);
+    // 랜덤한 확산탄 패턴 선택
+    const patterns = [
+        'circle',      // 원형 확산
+        'spiral',      // 나선형 확산
+        'wave',        // 파도형 확산
+        'burst',       // 연발 확산
+        'diamond',     // 다이아몬드 확산
+        'cross'        // 십자 확산
+    ];
+    
+    const selectedPattern = patterns[Math.floor(Math.random() * patterns.length)];
+    const pattern = boss.currentPattern || BOSS_PATTERNS.BASIC;
+    
+    console.log(`보스 확산탄 패턴: ${selectedPattern}`);
+    
+    switch(selectedPattern) {
+        case 'circle':
+            // 원형 확산 - 16발
+            for (let i = 0; i < 16; i++) {
+                const angle = (i * Math.PI * 2) / 16;
+                createBossBullet(boss, angle, pattern);
+            }
+            break;
+            
+        case 'spiral':
+            // 나선형 확산 - 회전하면서 발사
+            for (let i = 0; i < 20; i++) {
+                const angle = (i * Math.PI / 10) + (boss.rotorAngle || 0);
+                createBossBullet(boss, angle, pattern);
+            }
+            break;
+            
+        case 'wave':
+            // 파도형 확산 - 사인파 형태
+            for (let i = 0; i < 15; i++) {
+                const baseAngle = (i * Math.PI / 7.5);
+                const waveOffset = Math.sin(i * 0.4) * 0.5;
+                const angle = baseAngle + waveOffset;
+                createBossBullet(boss, angle, pattern);
+            }
+            break;
+            
+        case 'burst':
+            // 연발 확산 - 빠른 속도로 연속 발사
+            for (let i = 0; i < 8; i++) {
+                setTimeout(() => {
+                    const angle = Math.random() * Math.PI * 2;
+                    createBossBullet(boss, angle, pattern);
+                }, i * 50); // 50ms 간격으로 연속 발사
+            }
+            break;
+            
+        case 'diamond':
+            // 다이아몬드 확산 - 다이아몬드 형태
+            for (let i = 0; i < 12; i++) {
+                const angle = (i * Math.PI) / 6;
+                createBossBullet(boss, angle, pattern);
+            }
+            break;
+            
+        case 'cross':
+            // 십자 확산 - 4방향으로 확산
+            for (let i = 0; i < 8; i++) {
+                const angle = (i * Math.PI) / 4;
+                createBossBullet(boss, angle, pattern);
+            }
+            break;
     }
 }
 
