@@ -3766,7 +3766,7 @@ function createBoss() {
         } else {
             clearInterval(spreadShotInterval);
         }
-    }, 5000); // 5초마다 발사
+    }, 7000); // 7초마다 발사
 }
 
 // 보스 패턴 처리 함수 수정
@@ -3905,9 +3905,8 @@ function handleBossPattern(boss) {
             createBomb(boss);
         }
         
-        // 공격 패턴 (연속 발사 방지를 위한 추가 체크, 레벨에 따라 간격 조정)
-        const levelAdjustedInterval = Math.max(800, BOSS_SETTINGS.PATTERN_INTERVAL - (gameLevel * 300)); // 레벨당 300ms씩 감소
-        if (currentTime - boss.patternTimer >= levelAdjustedInterval && 
+        // 공격 패턴 (일정한 간격으로 발사)
+        if (currentTime - boss.patternTimer >= BOSS_SETTINGS.PATTERN_INTERVAL && 
             !boss.isExecutingPattern) {
             boss.patternTimer = currentTime;
             boss.isExecutingPattern = true; // 패턴 실행 중 플래그 설정
