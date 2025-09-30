@@ -1,5 +1,5 @@
 // 게임 상수 정의
-const SPECIAL_WEAPON_MAX_CHARGE = 3000;  // 특수무기 최대 충전량
+const SPECIAL_WEAPON_MAX_CHARGE = 2000;  // 특수무기 최대 충전량 (2000점으로 완화)
 const SPECIAL_WEAPON_CHARGE_RATE = 10;   // 특수무기 충전 속도
 const TOP_EFFECT_ZONE = 20;  // 상단 효과 무시 영역 (픽셀)
 
@@ -2514,8 +2514,8 @@ function checkEnemyCollisions(enemy) {
                         shieldedHelicopterDestroyed++;
                         console.log(`보호막 헬리콥터 파괴됨: ${enemy.type}, 총 파괴 수: ${shieldedHelicopterDestroyed}`);
                         
-                        // 3대 파괴할 때마다 목숨 1개 추가
-                        if (shieldedHelicopterDestroyed % 3 === 0) {
+                        // 2대 파괴할 때마다 목숨 1개 추가
+                        if (shieldedHelicopterDestroyed % 2 === 0) {
                             maxLives++;
                             // 목숨 추가 효과음
                             safePlaySound('levelup');
