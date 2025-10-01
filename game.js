@@ -3579,7 +3579,7 @@ function createBoss() {
         } else {
             clearInterval(spreadShotInterval);
         }
-    }, 7000); // 7초마다 발사
+    }, 3500); // 3.5초마다 발사
 }
 
 // 보스 패턴 처리 함수 삭제됨
