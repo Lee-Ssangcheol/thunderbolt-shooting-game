@@ -2502,11 +2502,7 @@ function checkEnemyCollisions(enemy) {
                         
                         // 3대 파괴할 때마다 목숨 1개 추가
                         if (shieldedHelicopterDestroyed % 3 === 0) {
-                            maxLives++;
-                            // 목숨 추가 효과음
-                            safePlaySound('levelup');
-                            // 목숨 추가 메시지 표시 비활성화
-                            // showLifeAddedMessage();
+                            handleLifeIncrease('보호막 헬리콥터 파괴');
                         }
                     }
                     
@@ -2538,38 +2534,9 @@ function checkEnemyCollisions(enemy) {
                 // 특수 무기인 경우 즉시 파괴
                 if (bullet.isSpecial) {
                     console.log('보스가 특수 무기에 맞음');
-                    enemy.health = 0;
-                    bossHealth = 0;
-                    bossDestroyed = true;
-                    updateScore(BOSS_SETTINGS.BONUS_SCORE);
-                    
-                    // 보스 파괴 시 목숨 1개 추가
-                    maxLives++; // 최대 목숨 증가
-                    
-                    // 큰 폭발 효과
-                    explosions.push(new Explosion(
-                        enemy.x + enemy.width/2,
-                        enemy.y + enemy.height/2,
-                        true
-                    ));
-                    
-                    // 추가 폭발 효과
-                    for (let i = 0; i < 8; i++) {
-                        const angle = (Math.PI * 2 / 8) * i;
-                        const distance = 50;
-                        explosions.push(new Explosion(
-                            enemy.x + enemy.width/2 + Math.cos(angle) * distance,
-                            enemy.y + enemy.height/2 + Math.sin(angle) * distance,
-                            false
-                        ));
+                    if (handleBossDestruction(enemy, true)) {
+                        return false;
                     }
-                    
-                    bossActive = false;
-                    isBossActive = false;
-                    // 보스 파괴 후 다음 보스 생성을 위한 시간 초기화
-                    lastBossSpawnTime = Date.now();
-                    console.log('보스 파괴됨 - 특수 무기, 상태 초기화 완료');
-                    return false;
                 }
                 
                 // 일반 총알인 경우
@@ -2599,41 +2566,9 @@ function checkEnemyCollisions(enemy) {
                         health: enemy.health,
                         bossHealth: bossHealth
                     });
-                    enemy.health = 0;
-                    bossHealth = 0;
-                    bossDestroyed = true;
-                    updateScore(BOSS_SETTINGS.BONUS_SCORE);
-                    
-                    // 보스 파괴 시 목숨 1개 추가
-                    maxLives++; // 최대 목숨 증가
-                    
-                    // 큰 폭발 효과 (특수무기와 동일한 효과)
-                    explosions.push(new Explosion(
-                        enemy.x + enemy.width/2,
-                        enemy.y + enemy.height/2,
-                        true
-                    ));
-                    
-                    // 추가 폭발 효과
-                    for (let i = 0; i < 8; i++) {
-                        const angle = (Math.PI * 2 / 8) * i;
-                        const distance = 50;
-                        explosions.push(new Explosion(
-                            enemy.x + enemy.width/2 + Math.cos(angle) * distance,
-                            enemy.y + enemy.height/2 + Math.sin(angle) * distance,
-                            false
-                        ));
+                    if (handleBossDestruction(enemy, false)) {
+                        return false;
                     }
-                    
-                    // 보스 파괴 시 충돌음 재생
-                    safePlaySound('collision');
-                    
-                    bossActive = false;
-                    isBossActive = false;
-                    // 보스 파괴 후 다음 보스 생성을 위한 시간 초기화
-                    lastBossSpawnTime = Date.now();
-                    console.log('보스 파괴됨 - 체력 소진, 상태 초기화 완료');
-                    return false;
                 }
                 
                 // 보스 피격음 재생
@@ -5122,12 +5057,59 @@ function handleEnemies() {
 
 // 중복된 createBoss 함수 제거 - 첫 번째 함수만 사용
 
-// 보스 파괴 시 처리
-function handleBossDestruction() {
+// 목숨 증가 처리 함수
+function handleLifeIncrease(reason) {
+    maxLives++;
+    safePlaySound('levelup');
+    console.log(`목숨 증가: ${reason}, 현재 목숨: ${maxLives}`);
+}
+
+// 보스 파괴 시 처리 - 통합된 파괴 로직
+function handleBossDestruction(boss, isSpecialWeapon = false) {
+    // 중복 파괴 방지
+    if (bossDestroyed) {
+        return false;
+    }
+    
+    console.log('보스 파괴 처리 시작:', { isSpecialWeapon, health: boss.health });
+    
+    // 보스 상태 설정
+    boss.health = 0;
+    bossHealth = 0;
+    bossDestroyed = true;
+    
+    // 점수 및 목숨 증가
+    updateScore(BOSS_SETTINGS.BONUS_SCORE);
+    handleLifeIncrease('보스 파괴');
+    
+    // 폭발 효과
+    explosions.push(new Explosion(
+        boss.x + boss.width/2,
+        boss.y + boss.height/2,
+        isSpecialWeapon // 특수무기인 경우 더 큰 폭발
+    ));
+    
+    // 추가 폭발 효과
+    for (let i = 0; i < 8; i++) {
+        const angle = (Math.PI * 2 / 8) * i;
+        const distance = 50;
+        explosions.push(new Explosion(
+            boss.x + boss.width/2 + Math.cos(angle) * distance,
+            boss.y + boss.height/2 + Math.sin(angle) * distance,
+            false
+        ));
+    }
+    
+    // 보스 상태 초기화
     bossActive = false;
-    isBossActive = false; // 보스 비활성화 상태 설정
-    lastHelicopterSpawnTime = Date.now(); // 일반 헬리콥터 생성 타이머 리셋
-    console.log('보스 헬리콥터 파괴됨');
+    isBossActive = false;
+    lastBossSpawnTime = Date.now();
+    
+    // 효과음 재생
+    safePlaySound('collision');
+    
+    console.log('보스 파괴 완료');
+    return true;
 }
 
 // 미사일 이미지 로드
