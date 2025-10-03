@@ -5701,55 +5701,70 @@ function drawBossBullet(bullet) {
 
 // 보스 총알 생성 함수
 function createBossBullet(boss, angle, patternType = 'spread', customSpeed = null, customColor = null) {
-    // 패턴별 색상 설정
+    // 패턴별 색상 및 크기 설정
     let bulletColor = '#FF0000'; // 기본 빨간색
-    let bulletSize = 18; // 크기를 18로 수정
+    let bulletSize = 18; // 기본 크기
     
     switch(patternType) {
         case 'snowflake_shot':
             bulletColor = '#FFFFFF';     // 눈 결정체 - 흰색
+            bulletSize = 14;             // 크기 조정 (16 → 14)
             break;
         case 'pinwheel_shot':
             bulletColor = '#90EE90';     // 바람개비 - 청녹색
+            bulletSize = 16;             // 크기 조정 (20 → 16)
             break;
         case 'triangle_shot':
             bulletColor = '#32CD32';     // 삼각형 - 밝은 라임그린
+            bulletSize = 14;             // 크기 조정 (16 → 14)
             break;
         case 'rectangle_shot':
             bulletColor = '#ADFF2F';     // 정사각형 - 연두색
+            bulletSize = 14;             // 크기 유지 (사각 모양 제외)
             break;
         case 'pentagon_shot':
             bulletColor = '#FFA500';     // 오각형 - 주황색
+            bulletSize = 14;             // 크기 조정 (16 → 14)
             break;
         case 'hexagon_shot':
             bulletColor = '#D3D3D3';     // 육각형 - 밝은 회색
+            bulletSize = 14;             // 크기 조정 (16 → 14)
             break;
         case 'octagon_shot':
             bulletColor = '#FFD700';     // 팔각형 - 밝은 골드
+            bulletSize = 14;             // 크기 조정 (16 → 14)
             break;
         case 'circle_shot':
             bulletColor = '#20B2AA';     // 원형 - 청녹색
+            bulletSize = 16;             // 크기 유지 (원 모양 제외)
             break;
         case 'cross_shot':
             bulletColor = '#FF4500';     // 십자 - 밝은 빨간색
+            bulletSize = 12;             // 크기 조정 (14 → 12)
             break;
         case 'heart_shot':
             bulletColor = '#FF69B4';     // 하트 - 밝은 핫핑크
+            bulletSize = 16;             // 크기 유지 (하트 모양 제외)
             break;
         case 'star_shot':
             bulletColor = '#FFFF00';     // 별 - 노란색
+            bulletSize = 14;             // 크기 조정 (18 → 14)
             break;
         case 'flower_shot':
             bulletColor = '#FF1493';     // 꽃 - 밝은 딥핑크
+            bulletSize = 14;             // 크기 조정 (16 → 14)
             break;
         case 'gear_shot':
             bulletColor = '#C0C0C0';     // 기어 - 은색
+            bulletSize = 14;             // 크기 조정 (16 → 14)
             break;
         case 'moon_shot':
             bulletColor = '#F0E68C';     // 달 - 카키색
+            bulletSize = 14;             // 크기 조정 (16 → 14)
             break;
         default:
             bulletColor = '#FF0000';     // 기본 빨간색
+            bulletSize = 18;             // 기본 크기 유지
             break;
     }
     
