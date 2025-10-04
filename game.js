@@ -534,7 +534,7 @@ let specialWeaponCount = 0;  // 특수무기 개수
 let enemySpawnRate = 2000;  // 적 생성 주기 (ms)
 let enemySpeed = 2;  // 적 이동 속도
 let lastCollisionTime = 0;  // 마지막 충돌 시간
-let collisionSoundCooldown = 300;  // 충돌음 쿨다운 시간
+let collisionSoundCooldown = 100;  // 충돌음 쿨다운 시간 (300ms → 100ms로 단축)
 let shieldedHelicopterDestroyed = 0;  // 보호막 헬리콥터 파괴 카운터
 let lifeWarningBlinkTimer = 0;  // 목숨 경고 깜빡임 타이머
 let lifeWarningBlinkDuration = 2000;  // 목숨 경고 깜빡임 지속 시간 (2초)
@@ -1456,8 +1456,7 @@ function handleEnemyBullets() {
                     life: 30,    // 3배 증가
                     pulse: 0     // 펄스 효과를 위한 변수 추가
                 });
-                // 충돌음
-                safePlaySound('collision');
+                // 충돌음 제거 - 플레이어 총알과 적 총알 충돌 시에는 사운드 없음
                 bullets.splice(i, 1);
                 return false;
             }
@@ -1842,8 +1841,11 @@ function showLifeAddedMessage() {
 
 // 충돌 처리 함수 수정
 function handleCollision() {
+    console.log('handleCollision 호출됨:', { playerY: player.y, TOP_EFFECT_ZONE });
+    
     // 상단 효과 무시 영역 체크
     if (player.y < TOP_EFFECT_ZONE) {
+        console.log('상단 효과 무시 영역 - 충돌 처리 건너뜀');
         return;
     }
     
@@ -1857,16 +1859,28 @@ function handleCollision() {
         collisionCount++;
         flashTimer = flashDuration;
         
-        // 목숨이 줄어들 때마다 경고음 재생 및 깜빡임 효과 시작
+        // 충돌할 때마다 경고음 재생 및 깜빡임 효과 시작
         const currentLifeCount = maxLives - collisionCount;
+        
+        // 경고음 재생 (쿨다운 적용) - 충돌할 때마다 재생
+        if (currentTime - lastCollisionTime >= collisionSoundCooldown) {
+            console.log('경고음 재생:', { currentTime, lastCollisionTime, cooldown: collisionSoundCooldown });
+            safePlaySound('warning');
+            lastCollisionTime = currentTime;
+        } else {
+            console.log('경고음 쿨다운 중:', { 
+                currentTime, 
+                lastCollisionTime, 
+                remaining: collisionSoundCooldown - (currentTime - lastCollisionTime) 
+            });
+        }
+        
+        // 깜빡임 효과 시작
+        lifeWarningBlinkTimer = lifeWarningBlinkDuration;
+        
+        // 목숨이 줄어들었을 때 추가 효과 (선택사항)
         if (currentLifeCount < lastLifeCount) {
-            // 경고음 재생 (쿨다운 적용) - 충돌음 제거하고 경고음만 재생
-            if (currentTime - lastCollisionTime >= collisionSoundCooldown) {
-                safePlaySound('warning');
-                lastCollisionTime = currentTime;
-            }
-            // 깜빡임 효과 시작
-            lifeWarningBlinkTimer = lifeWarningBlinkDuration;
+            // 추가 시각 효과나 사운드가 필요하면 여기에 추가
         }
         lastLifeCount = currentLifeCount;
         
@@ -4255,6 +4269,7 @@ function drawStartScreen() {
 // 폭탄 생성 함수 추가
 function createBomb(enemy) {
     const bomb = {
+        id: Date.now() + Math.random(), // 고유 ID 추가
         x: enemy.x + enemy.width/2,
         y: enemy.y + enemy.height,
         width: 15,
@@ -4303,9 +4318,12 @@ function handleBombs() {
         
         // 플레이어와 충돌 체크
         if (checkCollision(bomb, player) || (hasSecondPlane && checkCollision(bomb, secondPlane))) {
+            console.log('폭탄 충돌 감지:', { bombId: bomb.id, playerY: player.y });
             handleCollision();
             explosions.push(new Explosion(bomb.x, bomb.y, true));
-            return false;
+            // 폭탄 충돌 시 폭발음 재생
+            safePlaySound('explosion');
+            return false; // 폭탄 즉시 제거로 중복 충돌 방지
         }
         
         // 화면 밖으로 나간 폭탄 제거
@@ -4423,6 +4441,8 @@ function handleDynamites() {
         if (checkCollision(dynamite, player) || (hasSecondPlane && checkCollision(dynamite, secondPlane))) {
             handleCollision();
             explosions.push(new Explosion(dynamite.x, dynamite.y, true));
+            // 다이너마이트 충돌 시 폭발음 재생
+            safePlaySound('explosion');
             return false;
         }
         
@@ -4834,8 +4854,7 @@ function handleHelicopterBullets() {
                 console.log('충돌! 플레이어 총알과 헬기 총알', bullet, playerBullet);
                 explosions.push(new Explosion(bullet.x, bullet.y, false));
                 
-                // 충돌음 재생
-                safePlay(collisionSound);
+                // 충돌음 제거 - 플레이어 총알과 적 총알 충돌 시에는 사운드 없음
                 
                 bullets.splice(i, 1);
                 return false; // 충돌한 헬리콥터 총알 제거
