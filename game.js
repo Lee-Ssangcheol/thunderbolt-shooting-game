@@ -519,6 +519,7 @@ let flashTimer = 0;       // 깜박임 효과 타이머
 let flashDuration = 500;  // 깜박임 지속 시간
 let gameOverStartTime = null;  // 게임 오버 시작 시간
 let isSnakePatternActive = false;  // 뱀 패턴 활성화 상태
+let processedCollisions = new Set(); // 처리된 충돌 추적
 let snakePatternTimer = 0;  // 뱀 패턴 타이머
 let snakePatternDuration = 10000;  // 뱀 패턴 지속 시간 (10초)
 let snakeEnemies = [];  // 뱀 패턴의 적군 배열
@@ -1062,6 +1063,7 @@ async function initializeGame() {
         maxLives = 5;  // 최대 목숨 초기화
         lastLifeCount = maxLives;  // 초기 목숨 개수 설정
         shieldedHelicopterDestroyed = 0;  // 보호막 헬리콥터 파괴 카운터 초기화
+        processedCollisions.clear(); // 충돌 추적 세트 초기화
         isGameOver = false;
         isPaused = false;
         flashTimer = 0;
@@ -1128,6 +1130,7 @@ function restartGame() {
     maxLives = 5;  // 최대 목숨 초기화
     lastLifeCount = maxLives;  // 초기 목숨 개수 설정
     shieldedHelicopterDestroyed = 0;  // 보호막 헬리콥터 파괴 카운터 초기화
+    processedCollisions.clear(); // 충돌 추적 세트 초기화
     isGameOver = false;
     hasSecondPlane = false;
     lastSecondPlaneScore = 0;
@@ -1840,8 +1843,19 @@ function showLifeAddedMessage() {
 }
 
 // 충돌 처리 함수 수정
-function handleCollision() {
-    console.log('handleCollision 호출됨:', { playerY: player.y, TOP_EFFECT_ZONE });
+function handleCollision(collisionId = null) {
+    console.log('handleCollision 호출됨:', { playerY: player.y, TOP_EFFECT_ZONE, collisionId });
+    
+    // 충돌 ID가 제공된 경우 중복 처리 방지
+    if (collisionId && processedCollisions.has(collisionId)) {
+        console.log('이미 처리된 충돌:', collisionId);
+        return;
+    }
+    
+    // 충돌 ID를 처리된 목록에 추가
+    if (collisionId) {
+        processedCollisions.add(collisionId);
+    }
     
     // 상단 효과 무시 영역 체크
     if (player.y < TOP_EFFECT_ZONE) {
@@ -4278,7 +4292,8 @@ function createBomb(enemy) {
         rotation: 0,
         rotationSpeed: 0.1,
         trail: [],
-        isBossBomb: !!enemy.isBoss // 보스가 발사한 폭탄이면 true
+        isBossBomb: !!enemy.isBoss, // 보스가 발사한 폭탄이면 true
+        hasCollided: false // 충돌 플래그 초기화
     };
     bombs.push(bomb);
 }
@@ -4317,9 +4332,11 @@ function handleBombs() {
         ctx.restore();
         
         // 플레이어와 충돌 체크
-        if (checkCollision(bomb, player) || (hasSecondPlane && checkCollision(bomb, secondPlane))) {
-            console.log('폭탄 충돌 감지:', { bombId: bomb.id, playerY: player.y });
-            handleCollision();
+        if (!bomb.hasCollided && (checkCollision(bomb, player) || (hasSecondPlane && checkCollision(bomb, secondPlane)))) {
+            const collisionId = `bomb_${bomb.id}_${Date.now()}`;
+            console.log('폭탄 충돌 감지:', { bombId: bomb.id, playerY: player.y, collisionCount: collisionCount, collisionId });
+            bomb.hasCollided = true; // 중복 충돌 방지 플래그 설정
+            handleCollision(collisionId);
             explosions.push(new Explosion(bomb.x, bomb.y, true));
             // 폭탄 충돌 시 폭발음 재생
             safePlaySound('explosion');
@@ -4334,6 +4351,7 @@ function handleBombs() {
 // 다이나마이트 생성 함수 추가
 function createDynamite(enemy) {
     const dynamite = {
+        id: Date.now() + Math.random(), // 고유 ID 추가
         x: enemy.x + enemy.width/2,
         y: enemy.y + enemy.height,
         width: 20,
@@ -4345,7 +4363,8 @@ function createDynamite(enemy) {
         fuseTimer: 0,  // 도화선 타이머
         fuseLength: 100,  // 도화선 길이
         fuseBurning: true,  // 도화선 연소 상태
-        trail: []  // 꼬리 효과를 위한 배열
+        trail: [],  // 꼬리 효과를 위한 배열
+        hasCollided: false // 충돌 플래그 초기화
     };
     
     // 초기 불꽃 파티클 생성
@@ -4438,12 +4457,15 @@ function handleDynamites() {
         ctx.restore();
         
         // 플레이어와 충돌 체크
-        if (checkCollision(dynamite, player) || (hasSecondPlane && checkCollision(dynamite, secondPlane))) {
-            handleCollision();
+        if (!dynamite.hasCollided && (checkCollision(dynamite, player) || (hasSecondPlane && checkCollision(dynamite, secondPlane)))) {
+            const collisionId = `dynamite_${dynamite.id}_${Date.now()}`;
+            console.log('다이너마이트 충돌 감지:', { dynamiteId: dynamite.id, playerY: player.y, collisionCount: collisionCount, collisionId });
+            dynamite.hasCollided = true; // 중복 충돌 방지 플래그 설정
+            handleCollision(collisionId);
             explosions.push(new Explosion(dynamite.x, dynamite.y, true));
             // 다이너마이트 충돌 시 폭발음 재생
             safePlaySound('explosion');
-            return false;
+            return false; // 다이너마이트 즉시 제거로 중복 충돌 방지
         }
         
         // 화면 밖으로 나간 다이나마이트 제거
