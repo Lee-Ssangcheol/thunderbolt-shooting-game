@@ -1442,8 +1442,7 @@ function handleEnemyBullets() {
         if (checkCollision(bullet, player) || (hasSecondPlane && checkCollision(bullet, secondPlane))) {
             handleCollision();
             explosions.push(new Explosion(bullet.x, bullet.y, false));
-            // 폭발음
-            safePlaySound('explosion');
+            // 폭발음 제거 - handleCollision에서 경고음만 재생
             return false;
         }
         // 플레이어 총알과의 충돌 체크 (충돌 이펙트/음으로 변경)
@@ -1848,7 +1847,6 @@ function handleCollision() {
         return;
     }
     
-    safePlaySound('explosion', { volume: 3 }); // 플레이어 폭발음 2배 증가
     try {
         if (hasShield) {
             hasShield = false;
@@ -1862,7 +1860,7 @@ function handleCollision() {
         // 목숨이 줄어들 때마다 경고음 재생 및 깜빡임 효과 시작
         const currentLifeCount = maxLives - collisionCount;
         if (currentLifeCount < lastLifeCount) {
-            // 경고음 재생 (쿨다운 적용)
+            // 경고음 재생 (쿨다운 적용) - 충돌음 제거하고 경고음만 재생
             if (currentTime - lastCollisionTime >= collisionSoundCooldown) {
                 safePlaySound('warning');
                 lastCollisionTime = currentTime;
@@ -4848,6 +4846,7 @@ function handleHelicopterBullets() {
         if (checkCollision(bullet, player) || (hasSecondPlane && checkCollision(bullet, secondPlane))) {
             handleCollision();
             explosions.push(new Explosion(bullet.x, bullet.y, false));
+            // 폭발음 제거 - handleCollision에서 경고음만 재생
             return false;
         }
         
@@ -5919,6 +5918,7 @@ function handleBossSpreadBullets() {
             handleCollision();
             // 총알 충돌 시 작은 폭발 효과
             explosions.push(new Explosion(bullet.x, bullet.y, false));
+            // 폭발음 제거 - handleCollision에서 경고음만 재생
             return false;
         }
         
