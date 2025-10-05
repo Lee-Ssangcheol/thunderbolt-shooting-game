@@ -1241,19 +1241,8 @@ function createEnemy() {
     const isHelicopter = Math.random() < (0.3 + (gameLevel * 0.05));
     
     if (!isBossActive && isHelicopter) {
-        // 보호막 헬리콥터(헬리콥터1 + 헬리콥터2)가 화면에 4대 이상 있으면 생성하지 않음
-        const currentShieldedHelicopters = enemies.filter(enemy => 
-            (enemy.type === ENEMY_TYPES.HELICOPTER || enemy.type === ENEMY_TYPES.HELICOPTER2) && 
-            enemy.shieldActive
-        ).length;
-        
-        if (currentShieldedHelicopters >= 4) {
-            console.log('보호막 헬리콥터가 이미 4대 있어서 생성하지 않음', {
-                current: currentShieldedHelicopters,
-                max: 4,
-                helicopter1: enemies.filter(enemy => enemy.type === ENEMY_TYPES.HELICOPTER),
-                helicopter2: enemies.filter(enemy => enemy.type === ENEMY_TYPES.HELICOPTER2)
-            });
+        // 보호막 헬리콥터 생성 가능 여부 확인
+        if (!canCreateShieldedHelicopter()) {
             return; // 보호막 헬리콥터 생성 중단
         }
         
@@ -2527,8 +2516,8 @@ function checkEnemyCollisions(enemy) {
                         shieldedHelicopterDestroyed++;
                         console.log(`보호막 헬리콥터 파괴됨: ${enemy.type}, 총 파괴 수: ${shieldedHelicopterDestroyed}`);
                         
-                        // 3대 파괴할 때마다 목숨 1개 추가
-                        if (shieldedHelicopterDestroyed % 3 === 0) {
+                        // 1대 파괴할 때마다 목숨 1개 추가
+                        if (shieldedHelicopterDestroyed % 1 === 0) {
                             handleLifeIncrease('보호막 헬리콥터 파괴');
                         }
                     }
@@ -2907,10 +2896,7 @@ function drawUI() {
     ctx.fillText(`남은 목숨: ${maxLives - collisionCount}`, 20, 255);
     
     // 보호막 정보 표시
-    const shieldedHelicopters = enemies.filter(enemy => 
-        (enemy.type === ENEMY_TYPES.HELICOPTER || enemy.type === ENEMY_TYPES.HELICOPTER2) && 
-        enemy.shieldActive && enemy.shieldHealth > 0
-    );
+    const shieldedHelicopters = getActiveShieldedHelicopters();
     
     // 보호막 헬리콥터 파괴 카운터 표시 제거됨
     
@@ -4486,21 +4472,43 @@ const ENEMY_TYPES = {
     HELICOPTER2: 'helicopter2'  // 새로운 헬리콥터 타입 추가
 };
 
-// 헬리콥터 생성 함수 수정
-function createHelicopter() {
-    // 보호막 헬리콥터(헬리콥터1 + 헬리콥터2)가 화면에 4대 이상 있으면 생성하지 않음
-    const currentShieldedHelicopters = enemies.filter(enemy => 
+// 보호막 헬리콥터 필터링 함수
+function getActiveShieldedHelicopters() {
+    return enemies.filter(enemy => 
+        (enemy.type === ENEMY_TYPES.HELICOPTER || enemy.type === ENEMY_TYPES.HELICOPTER2) && 
+        enemy.shieldActive && enemy.shieldHealth > 0
+    );
+}
+
+// 보호막 헬리콥터 개수 확인 함수
+function getCurrentShieldedHelicopterCount() {
+    return enemies.filter(enemy => 
         (enemy.type === ENEMY_TYPES.HELICOPTER || enemy.type === ENEMY_TYPES.HELICOPTER2) && 
         enemy.shieldActive
     ).length;
+}
+
+// 보호막 헬리콥터 생성 가능 여부 확인 함수
+function canCreateShieldedHelicopter() {
+    const currentCount = getCurrentShieldedHelicopterCount();
+    const maxCount = 4;
     
-    if (currentShieldedHelicopters >= 4) {
-        console.log('보호막 헬리콥터가 이미 4대 있어서 헬리콥터1 생성하지 않음', {
-            current: currentShieldedHelicopters,
-            max: 4,
+    if (currentCount >= maxCount) {
+        console.log('보호막 헬리콥터가 이미 4대 있어서 생성하지 않음', {
+            current: currentCount,
+            max: maxCount,
             helicopter1: enemies.filter(enemy => enemy.type === ENEMY_TYPES.HELICOPTER),
             helicopter2: enemies.filter(enemy => enemy.type === ENEMY_TYPES.HELICOPTER2)
         });
+        return false;
+    }
+    return true;
+}
+
+// 헬리콥터 생성 함수 수정
+function createHelicopter() {
+    // 보호막 헬리콥터 생성 가능 여부 확인
+    if (!canCreateShieldedHelicopter()) {
         return null; // 헬리콥터 생성 중단
     }
     
@@ -5076,18 +5084,7 @@ function handleEnemies() {
         lastEnemySpawnTime = currentTime;
         console.log('새로운 적 생성됨');
     }
-    if (!isBossActive && currentTime - lastHelicopterSpawnTime >= MIN_HELICOPTER_SPAWN_INTERVAL) {
-        if (Math.random() < 0.01) { // 1% 확률로 헬리콥터 생성
-            const helicopter = createHelicopter();
-            if (helicopter) {
-                enemies.push(helicopter);
-                lastHelicopterSpawnTime = currentTime;
-                console.log('헬리콥터1이 enemies 배열에 추가됨');
-            } else {
-                console.log('헬리콥터1 생성 실패 - 보호막 헬리콥터 제한에 도달');
-            }
-        }
-    }
+    
     let helicopterFiredThisFrame = false;
     enemies = enemies.filter(enemy => {
         updateEnemyPosition(enemy, {helicopterFiredThisFrame});
