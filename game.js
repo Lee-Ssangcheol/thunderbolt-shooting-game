@@ -2822,6 +2822,12 @@ function handleSpecialWeapon() {
         specialWeaponCount--;  // 특수무기 개수 감소
         specialWeaponCharged = specialWeaponCount > 0;
         
+        // 특수무기 소진 시 충전량 초기화
+        if (specialWeaponCount === 0) {
+            specialWeaponCharge = 0;
+            console.log('특수무기 소진 - 충전량 초기화');
+        }
+        
         // 특수 무기 발사 효과음
         safePlaySound('shoot');
         
@@ -3224,16 +3230,26 @@ function updateScore(points) {
     levelScore += points;
     
     // 특수 무기 게이지 증가 (첨부 파일과 동일한 방식)
+    // 특수무기가 최대 개수에 도달하지 않은 경우에만 충전
+    if (specialWeaponCount < 5) {
         specialWeaponCharge += points;
         if (specialWeaponCharge >= SPECIAL_WEAPON_MAX_CHARGE) {
-        const newWeapons = Math.floor(specialWeaponCharge / SPECIAL_WEAPON_MAX_CHARGE);
-        specialWeaponCount += newWeapons;
-        // 최대 보유 개수 5개로 제한
-        if (specialWeaponCount > 5) {
-            specialWeaponCount = 5;
+            const newWeapons = Math.floor(specialWeaponCharge / SPECIAL_WEAPON_MAX_CHARGE);
+            specialWeaponCount += newWeapons;
+            // 최대 보유 개수 5개로 제한
+            if (specialWeaponCount > 5) {
+                specialWeaponCount = 5;
+                // 최대 개수 도달 시 충전량 초기화
+                specialWeaponCharge = 0;
+                console.log('특수무기 최대 개수 도달 - 충전량 초기화');
+            } else {
+                specialWeaponCharge = specialWeaponCharge % SPECIAL_WEAPON_MAX_CHARGE;
+            }
+            specialWeaponCharged = specialWeaponCount > 0;
         }
-        specialWeaponCharge = specialWeaponCharge % SPECIAL_WEAPON_MAX_CHARGE;
-        specialWeaponCharged = specialWeaponCount > 0;
+    } else {
+        // 최대 개수 도달 시 충전량 초기화
+        specialWeaponCharge = 0;
     }
     
     // 최고 점수 즉시 업데이트 및 저장
