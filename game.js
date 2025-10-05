@@ -1220,14 +1220,14 @@ function createEnemy() {
         
         currentDifficulty = {
             enemySpeed: difficultySettings[baseLevel].enemySpeed * levelMultiplier,
-            enemySpawnRate: Math.min(0.9, difficultySettings[baseLevel].enemySpawnRate * levelMultiplier),
-            maxEnemies: Math.min(15, difficultySettings[baseLevel].maxEnemies + Math.floor((gameLevel - baseLevel) / 2)),
+            enemySpawnRate: Math.min(0.7, difficultySettings[baseLevel].enemySpawnRate * levelMultiplier), // 최대 70%로 제한
+            maxEnemies: Math.min(12, difficultySettings[baseLevel].maxEnemies + Math.floor((gameLevel - baseLevel) / 2)), // 최대 12개로 제한
             enemyHealth: Math.floor(difficultySettings[baseLevel].enemyHealth * levelMultiplier),
-            patternChance: Math.min(0.9, difficultySettings[baseLevel].patternChance * levelMultiplier),
+            patternChance: Math.min(0.8, difficultySettings[baseLevel].patternChance * levelMultiplier), // 최대 80%로 제한
             fireInterval: Math.max(500, difficultySettings[baseLevel].fireInterval / levelMultiplier),
-            bombDropChance: Math.min(0.8, difficultySettings[baseLevel].bombDropChance * levelMultiplier),
+            bombDropChance: Math.min(0.6, difficultySettings[baseLevel].bombDropChance * levelMultiplier), // 최대 60%로 제한
             bulletSpeed: difficultySettings[baseLevel].enemySpeed * levelMultiplier,
-            specialPatternChance: Math.min(0.8, difficultySettings[baseLevel].specialPatternChance * levelMultiplier)
+            specialPatternChance: Math.min(0.6, difficultySettings[baseLevel].specialPatternChance * levelMultiplier) // 최대 60%로 제한
         };
     }
     
@@ -1237,19 +1237,21 @@ function createEnemy() {
         currentDifficulty = difficultySettings[1];
     }
     
-    // 헬리콥터 출현 비율을 레벨에 따라 조정
-    const isHelicopter = Math.random() < (0.3 + (gameLevel * 0.05));
+    // 헬리콥터 출현 비율을 레벨에 따라 조정 (일반 비행기도 생성되도록 수정)
+    const isHelicopter = Math.random() < Math.min(0.4, 0.2 + (gameLevel * 0.03)); // 최대 40%로 제한
     
     if (!isBossActive && isHelicopter) {
+        console.log(`헬리콥터 생성 시도: 레벨 ${gameLevel}, 확률: ${Math.min(0.4, 0.2 + (gameLevel * 0.03))}`);
+        
         // 보호막 헬리콥터 생성 가능 여부 확인
         if (!canCreateShieldedHelicopter()) {
-            return; // 보호막 헬리콥터 생성 중단
-        }
-        
-        // 일반 헬리콥터와 helicopter2 중에서 선택 (보호막 헬리콥터는 30% 확률로 생성)
-        const isHelicopter2 = Math.random() < 0.3;  // 30% 확률로 helicopter2 생성
-        
-        if (isHelicopter2) {
+            console.log('보호막 헬리콥터 생성 불가 - 일반 비행기로 대체');
+            // 헬리콥터 생성이 불가능하면 일반 비행기 생성으로 넘어감
+        } else {
+            // 일반 헬리콥터와 helicopter2 중에서 선택 (보호막 헬리콥터는 30% 확률로 생성)
+            const isHelicopter2 = Math.random() < 0.3;  // 30% 확률로 helicopter2 생성
+            
+            if (isHelicopter2) {
             const enemy = {
                 x: Math.random() * (canvas.width - 48),
                 y: -48,  // 화면 상단에서 시작
@@ -1271,7 +1273,7 @@ function createEnemy() {
                 fireInterval: currentDifficulty.fireInterval,
                 bulletSpeed: currentDifficulty.bulletSpeed,
                 health: currentDifficulty.enemyHealth,
-                score: 100 * gameLevel,
+                score: Math.min(200, 100 + gameLevel * 5), // 최대 200점으로 제한
                 isElite: Math.random() < (0.05 + (gameLevel * 0.02)),
                 specialAbility: Math.random() < (0.1 + (gameLevel * 0.03)) ? getRandomSpecialAbility() : null,
                 // 보호막 시스템 추가
@@ -1320,7 +1322,7 @@ function createEnemy() {
                 lastUpdateTime: Date.now(),
                 bulletSpeed: currentDifficulty.bulletSpeed,
                 health: currentDifficulty.enemyHealth,
-                score: 150 * gameLevel,
+                score: Math.min(300, 150 + gameLevel * 5), // 최대 300점으로 제한
                 isElite: Math.random() < (0.05 + (gameLevel * 0.02)),
                 specialAbility: Math.random() < (0.1 + (gameLevel * 0.03)) ? getRandomSpecialAbility() : null,
                 // 보호막 시스템 추가
@@ -1348,7 +1350,9 @@ function createEnemy() {
             }
 
             enemies.push(helicopter);
+            console.log('헬리콥터1 생성됨:', helicopter);
             return;
+        }
         }
     }
 
@@ -1356,6 +1360,8 @@ function createEnemy() {
     const patterns = Object.values(ENEMY_PATTERNS);
     const enemyType = Math.random() < currentDifficulty.patternChance ? 
         patterns[Math.floor(Math.random() * patterns.length)] : ENEMY_PATTERNS.NORMAL;
+    
+    console.log(`일반 비행기 생성: 레벨 ${gameLevel}, 패턴: ${enemyType}, 헬리콥터 확률: ${Math.min(0.4, 0.2 + (gameLevel * 0.03))}`);
     
     const spawnX = Math.random() * (canvas.width - 72);  // 크기가 1.5배로 커졌으므로 여백도 1.5배로
     const spawnY = -72;  // 화면 상단에서 시작
@@ -2248,14 +2254,14 @@ function handleEnemies() {
         
         currentDifficulty = {
             enemySpeed: difficultySettings[baseLevel].enemySpeed * levelMultiplier,
-            enemySpawnRate: Math.min(0.9, difficultySettings[baseLevel].enemySpawnRate * levelMultiplier),
-            maxEnemies: Math.min(15, difficultySettings[baseLevel].maxEnemies + Math.floor((gameLevel - baseLevel) / 2)),
+            enemySpawnRate: Math.min(0.7, difficultySettings[baseLevel].enemySpawnRate * levelMultiplier), // 최대 70%로 제한
+            maxEnemies: Math.min(12, difficultySettings[baseLevel].maxEnemies + Math.floor((gameLevel - baseLevel) / 2)), // 최대 12개로 제한
             enemyHealth: Math.floor(difficultySettings[baseLevel].enemyHealth * levelMultiplier),
-            patternChance: Math.min(0.9, difficultySettings[baseLevel].patternChance * levelMultiplier),
+            patternChance: Math.min(0.8, difficultySettings[baseLevel].patternChance * levelMultiplier), // 최대 80%로 제한
             fireInterval: Math.max(500, difficultySettings[baseLevel].fireInterval / levelMultiplier),
-            bombDropChance: Math.min(0.8, difficultySettings[baseLevel].bombDropChance * levelMultiplier),
+            bombDropChance: Math.min(0.6, difficultySettings[baseLevel].bombDropChance * levelMultiplier), // 최대 60%로 제한
             bulletSpeed: difficultySettings[baseLevel].enemySpeed * levelMultiplier,
-            specialPatternChance: Math.min(0.8, difficultySettings[baseLevel].specialPatternChance * levelMultiplier)
+            specialPatternChance: Math.min(0.6, difficultySettings[baseLevel].specialPatternChance * levelMultiplier) // 최대 60%로 제한
         };
     }
     
@@ -2638,13 +2644,11 @@ function checkEnemyCollisions(enemy) {
                     }
                     
                     // 헬리콥터 파괴 시 보너스 점수
+                    console.log(`헬리콥터 파괴: 레벨 ${gameLevel}, 점수 ${enemy.score || 150}, 특수무기 개수 ${specialWeaponCount}`);
                     updateScore(enemy.score || 150);
                 } else {
                     // 일반 비행기 파괴 시 기존 효과
-                    explosions.push(new Explosion(
-                        enemy.x + enemy.width/2,
-                        enemy.y + enemy.height/2
-                    ));
+                    console.log(`일반 비행기 파괴: 레벨 ${gameLevel}, 점수 10, 특수무기 개수 ${specialWeaponCount}`);
                     updateScore(10);
                 }
                 
@@ -2830,6 +2834,13 @@ function handleSpecialWeapon() {
             console.log('특수무기 소진 - 충전량 초기화');
         }
         
+        // 안전장치: 특수무기 개수가 음수가 되지 않도록
+        if (specialWeaponCount < 0) {
+            specialWeaponCount = 0;
+            specialWeaponCharge = 0;
+            console.log('특수무기 개수 오류 수정 - 0으로 초기화');
+        }
+        
         // 특수 무기 발사 효과음
         safePlaySound('shoot');
         
@@ -2870,10 +2881,11 @@ function drawUI() {
     ctx.fillText(`최고 점수: ${highScore}`, 20, 130);
     ctx.fillText(`최고 점수 리셋: R키`, 20, 160);
     if (!hasSecondPlane) {
-        // 다음 추가 비행기까지 남은 점수 계산
-        const nextPlaneScore = Math.ceil(score / 2000) * 2000;
+        // 다음 추가 비행기까지 남은 점수 계산 (레벨별 조정)
+        const requiredScoreGap = 2000 + (gameLevel * 100);
+        const nextPlaneScore = lastSecondPlaneScore + requiredScoreGap;
         const remainingScore = Math.max(0, nextPlaneScore - score);
-        ctx.fillText(`다음 추가 비행기까지: ${remainingScore}점`, 20, 190);
+        ctx.fillText(`다음 추가 비행기까지: ${remainingScore}점 (레벨 ${gameLevel})`, 20, 190);
     } else {
         const remainingTime = Math.ceil((10000 - (Date.now() - secondPlaneTimer)) / 1000);
         ctx.fillText(`추가 비행기 남은 시간: ${remainingTime}초`, 20, 190);
@@ -3233,29 +3245,73 @@ function updateScore(points) {
     
     // 특수 무기 게이지 증가 (첨부 파일과 동일한 방식)
     // 특수무기가 최대 개수에 도달하지 않은 경우에만 충전
+    console.log(`특수무기 충전 시도: 레벨 ${gameLevel}, 개수 ${specialWeaponCount}, 충전량 ${specialWeaponCharge}, 획득 점수 ${points}`);
+    
+    // 레벨 35 이상에서 특수무기 충전 강화
+    if (gameLevel >= 35) {
+        console.log(`레벨 35 이상 특수무기 충전 강화: 기본 점수 ${points} -> 강화 점수 ${points * 1.5}`);
+        points = Math.floor(points * 1.5); // 레벨 35 이상에서 점수 1.5배 증가
+    }
+    
+    // 안전장치: 특수무기 개수가 비정상적인 값인 경우 수정
+    if (specialWeaponCount < 0) {
+        console.log('특수무기 개수가 음수 - 0으로 수정');
+        specialWeaponCount = 0;
+        specialWeaponCharge = 0;
+    }
+    
+    if (specialWeaponCount > 5) {
+        console.log('특수무기 개수가 5 초과 - 5로 수정');
+        specialWeaponCount = 5;
+        specialWeaponCharge = 0;
+    }
+    
+    // 특수무기 충전 로직 - 모든 레벨에서 동일하게 작동
     if (specialWeaponCount < 5) {
+        // 특수무기가 0개일 때도 충전 가능하도록 허용
         specialWeaponCharge += points;
-        console.log(`특수무기 충전: +${points}점, 현재 충전량: ${specialWeaponCharge}/${SPECIAL_WEAPON_MAX_CHARGE}`);
+        console.log(`특수무기 충전: +${points}점, 현재 충전량: ${specialWeaponCharge}/${SPECIAL_WEAPON_MAX_CHARGE}, 개수: ${specialWeaponCount}`);
+        
+        // 충전량이 최대 충전량을 초과하지 않도록 제한 (레벨 35 이상에서는 더 엄격하게)
+        const maxChargeLimit = gameLevel >= 35 ? SPECIAL_WEAPON_MAX_CHARGE * 1.5 : SPECIAL_WEAPON_MAX_CHARGE * 2;
+        if (specialWeaponCharge > maxChargeLimit) {
+            console.log(`충전량이 비정상적으로 높음 (${specialWeaponCharge} > ${maxChargeLimit}) - 초기화`);
+            specialWeaponCharge = 0;
+        }
         
         if (specialWeaponCharge >= SPECIAL_WEAPON_MAX_CHARGE) {
-            const newWeapons = Math.floor(specialWeaponCharge / SPECIAL_WEAPON_MAX_CHARGE);
-            specialWeaponCount += newWeapons;
+            // 한 번에 1개씩만 획득하도록 수정
+            specialWeaponCount += 1;
+            specialWeaponCharge -= SPECIAL_WEAPON_MAX_CHARGE; // 충전량에서 차감
+            
             // 최대 보유 개수 5개로 제한
             if (specialWeaponCount > 5) {
                 specialWeaponCount = 5;
                 // 최대 개수 도달 시 충전량 초기화
                 specialWeaponCharge = 0;
                 console.log('특수무기 최대 개수 도달 - 충전량 초기화');
-            } else {
-                specialWeaponCharge = specialWeaponCharge % SPECIAL_WEAPON_MAX_CHARGE;
             }
+            
             specialWeaponCharged = specialWeaponCount > 0;
-            console.log(`특수무기 획득: ${newWeapons}개, 총 개수: ${specialWeaponCount}, 충전량: ${specialWeaponCharge}`);
+            console.log(`특수무기 획득: 1개, 총 개수: ${specialWeaponCount}, 충전량: ${specialWeaponCharge}`);
         }
     } else {
         // 최대 개수 도달 시 충전량 초기화
         specialWeaponCharge = 0;
         console.log('특수무기 최대 개수 도달 - 충전 중단');
+    }
+    
+    // 추가 안전장치: 특수무기 상태 검증
+    if (specialWeaponCount < 0 || specialWeaponCount > 5) {
+        console.error(`특수무기 개수 오류: ${specialWeaponCount} - 강제 수정`);
+        specialWeaponCount = Math.max(0, Math.min(5, specialWeaponCount));
+        specialWeaponCharge = 0;
+    }
+    
+    // 레벨 35 이상에서 특수무기 충전량 안정화
+    if (gameLevel >= 35 && specialWeaponCharge > SPECIAL_WEAPON_MAX_CHARGE) {
+        console.log(`레벨 35 이상 충전량 안정화: ${specialWeaponCharge} -> ${SPECIAL_WEAPON_MAX_CHARGE}`);
+        specialWeaponCharge = SPECIAL_WEAPON_MAX_CHARGE;
     }
     
     // 최고 점수 즉시 업데이트 및 저장
@@ -3268,12 +3324,19 @@ function updateScore(points) {
 // 두 번째 비행기 처리 함수 추가
 function handleSecondPlane() {
     // 추가 비행기가 아직 등장하지 않았고, 점수가 2000점 이상이며 이전에 등장한 점수보다 2000점 이상 높을 때 등장
-    if (score >= 2000 && !hasSecondPlane && score >= lastSecondPlaneScore + 2000) {
+    // 레벨이 높아질수록 더 많은 점수가 필요하도록 조정
+    const requiredScoreGap = 2000 + (gameLevel * 100); // 레벨당 100점씩 추가 필요
+    const canAcquireSecondPlane = score >= 2000 && !hasSecondPlane && score >= lastSecondPlaneScore + requiredScoreGap;
+    
+    console.log(`두 번째 비행기 조건 확인: 현재 점수 ${score}, 마지막 획득 점수 ${lastSecondPlaneScore}, 필요 점수 차이 ${requiredScoreGap}, 레벨 ${gameLevel}`);
+    
+    if (canAcquireSecondPlane) {
         hasSecondPlane = true;
         lastSecondPlaneScore = score; // 현재 점수를 마지막 등장 점수로 설정
         secondPlane.x = player.x - 60;
         secondPlane.y = player.y;
         secondPlaneTimer = Date.now(); // 타이머 시작
+        console.log(`두 번째 비행기 획득: 점수 ${score}, 레벨 ${gameLevel}, 필요 점수 차이 ${requiredScoreGap}`);
         // 두 번째 비행기 획득 메시지
         ctx.fillStyle = 'yellow';
         ctx.font = '40px Arial';
@@ -3282,8 +3345,10 @@ function handleSecondPlane() {
 
     if (hasSecondPlane) {
         const elapsedTime = Date.now() - secondPlaneTimer;
+        console.log(`두 번째 비행기 타이머: ${elapsedTime}ms, 남은 시간: ${Math.ceil((10000 - elapsedTime) / 1000)}초`);
         if (elapsedTime >= 10000) { // 10초 체크
             hasSecondPlane = false;
+            console.log(`두 번째 비행기 소멸: 점수 ${score}, 레벨 ${gameLevel}`);
             // 두 번째 비행기 소멸 메시지
             ctx.fillStyle = 'red';
             ctx.font = '40px Arial';
@@ -5064,14 +5129,14 @@ function handleEnemies() {
         
         currentDifficulty = {
             enemySpeed: difficultySettings[baseLevel].enemySpeed * levelMultiplier,
-            enemySpawnRate: Math.min(0.9, difficultySettings[baseLevel].enemySpawnRate * levelMultiplier),
-            maxEnemies: Math.min(15, difficultySettings[baseLevel].maxEnemies + Math.floor((gameLevel - baseLevel) / 2)),
+            enemySpawnRate: Math.min(0.7, difficultySettings[baseLevel].enemySpawnRate * levelMultiplier), // 최대 70%로 제한
+            maxEnemies: Math.min(12, difficultySettings[baseLevel].maxEnemies + Math.floor((gameLevel - baseLevel) / 2)), // 최대 12개로 제한
             enemyHealth: Math.floor(difficultySettings[baseLevel].enemyHealth * levelMultiplier),
-            patternChance: Math.min(0.9, difficultySettings[baseLevel].patternChance * levelMultiplier),
+            patternChance: Math.min(0.8, difficultySettings[baseLevel].patternChance * levelMultiplier), // 최대 80%로 제한
             fireInterval: Math.max(500, difficultySettings[baseLevel].fireInterval / levelMultiplier),
-            bombDropChance: Math.min(0.8, difficultySettings[baseLevel].bombDropChance * levelMultiplier),
+            bombDropChance: Math.min(0.6, difficultySettings[baseLevel].bombDropChance * levelMultiplier), // 최대 60%로 제한
             bulletSpeed: difficultySettings[baseLevel].enemySpeed * levelMultiplier,
-            specialPatternChance: Math.min(0.8, difficultySettings[baseLevel].specialPatternChance * levelMultiplier)
+            specialPatternChance: Math.min(0.6, difficultySettings[baseLevel].specialPatternChance * levelMultiplier) // 최대 60%로 제한
         };
     }
     
