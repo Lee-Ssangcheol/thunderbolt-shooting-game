@@ -5459,26 +5459,15 @@ function safePlay(audio) {
 // 새로운 사운드 매니저를 사용하는 safePlay 함수
 function safePlaySound(soundName, options = undefined) {
     try {
-        console.log('safePlaySound 호출됨:', soundName);
-        console.log('gameSoundManager 존재:', !!gameSoundManager);
-        if (gameSoundManager) {
-            console.log('사운드 매니저 초기화 상태:', gameSoundManager.initialized);
-            console.log('사운드 매니저 활성화 상태:', gameSoundManager.isEnabled());
-            console.log('사운드 매니저 볼륨:', gameSoundManager.getVolume());
-        }
-        
         if (gameSoundManager && gameSoundManager.isEnabled()) {
-            console.log('사운드 재생 시도:', soundName);
             if (options) {
                 gameSoundManager.play(soundName, options);
             } else {
                 gameSoundManager.play(soundName);
             }
-        } else {
-            console.log('사운드 재생 실패 - 매니저가 비활성화되었거나 초기화되지 않음');
         }
     } catch (e) {
-        console.error('사운드 재생 중 오류:', e);
+        console.error('사운드 재생 중 오류:', soundName, e);
     }
 }
 
