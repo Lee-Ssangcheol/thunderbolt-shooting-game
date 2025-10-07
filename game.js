@@ -2540,6 +2540,8 @@ function checkEnemyCollisions(enemy) {
                     // 보호막 파괴음 (보스와 동일하게 적용)
                     safePlaySound('explosion');
                     safePlaySound('collision');
+                    // 보호막 헬리콥터 파괴 시 추가 폭발 효과음 (플레이어 폭발과 동일한 볼륨)
+                    safePlaySound('explosion', { volume: 3 });
                 } else {
                     // 보호막 피격음 (보스와 동일하게 적용)
                     safePlaySound('collision');
@@ -2647,6 +2649,8 @@ function checkEnemyCollisions(enemy) {
                     // 헬리콥터 파괴 시 보너스 점수
                     console.log(`헬리콥터 파괴: 레벨 ${gameLevel}, 점수 ${enemy.score || 150}, 특수무기 개수 ${specialWeaponCount}`);
                     updateScore(enemy.score || 150);
+                    // 헬리콥터 파괴 시 폭발 효과음 재생 (플레이어 폭발과 동일한 볼륨)
+                    safePlaySound('explosion', { volume: 3 });
                 } else {
                     // 일반 비행기 파괴 시 기존 효과
                     console.log(`일반 비행기 파괴: 레벨 ${gameLevel}, 점수 10, 특수무기 개수 ${specialWeaponCount}`);
@@ -5237,6 +5241,8 @@ function handleBossDestruction(boss, isSpecialWeapon = false) {
     
     // 효과음 재생
     safePlaySound('collision');
+    // 보스 파괴 시 폭발 효과음 재생 (플레이어 폭발과 동일한 볼륨)
+    safePlaySound('explosion', { volume: 3 });
     
     console.log('보스 파괴 완료');
     return true;
