@@ -1455,7 +1455,8 @@ function handleEnemyBullets() {
                     life: 30,    // 3배 증가
                     pulse: 0     // 펄스 효과를 위한 변수 추가
                 });
-                // 충돌음 제거 - 플레이어 총알과 적 총알 충돌 시에는 사운드 없음
+                // 플레이어 총알과 적 총알 충돌 시 shoot 효과음 재생
+                safePlaySound('shoot');
                 bullets.splice(i, 1);
                 return false;
             }
@@ -3451,8 +3452,8 @@ function handleBullets() {
             if (!helicopterBullet.isBossBullet && checkCollision(bullet, helicopterBullet)) {
                 // 충돌 시 폭발 효과 추가
                 explosions.push(new Explosion(helicopterBullet.x, helicopterBullet.y, false));
-                // 충돌음 재생
-                safePlay(collisionSound);
+                // 헬리콥터 총알 피격 시 shoot 효과음 재생
+                safePlaySound('shoot');
                 // 헬리콥터 총알 제거
                 helicopterBullets.splice(i, 1);
                 // 플레이어 총알도 제거
@@ -3465,8 +3466,8 @@ function handleBullets() {
             if (checkCollision(bullet, bomb)) {
                 // 폭탄 폭발
                 explosions.push(new Explosion(bomb.x, bomb.y, true));
-                // 충돌음 재생
-                safePlay(collisionSound);
+                // 폭탄 피격 시 shoot 효과음 재생
+                safePlaySound('shoot');
                 return false;
             }
             return true;
@@ -3477,8 +3478,8 @@ function handleBullets() {
             if (checkCollision(bullet, dynamite)) {
                 // 다이나마이트 폭발
                 explosions.push(new Explosion(dynamite.x, dynamite.y, true));
-                // 충돌음 재생
-                safePlay(collisionSound);
+                // 다이너마이트 피격 시 shoot 효과음 재생
+                safePlaySound('shoot');
                 return false;
             }
             return true;
@@ -4974,7 +4975,8 @@ function handleHelicopterBullets() {
                 console.log('충돌! 플레이어 총알과 헬기 총알', bullet, playerBullet);
                 explosions.push(new Explosion(bullet.x, bullet.y, false));
                 
-                // 충돌음 제거 - 플레이어 총알과 적 총알 충돌 시에는 사운드 없음
+                // 플레이어 총알과 적 총알 충돌 시 shoot 효과음 재생
+                safePlaySound('shoot');
                 
                 bullets.splice(i, 1);
                 return false; // 충돌한 헬리콥터 총알 제거
