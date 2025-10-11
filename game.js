@@ -5194,7 +5194,10 @@ function handleEnemies() {
 // 목숨 증가 처리 함수
 function handleLifeIncrease(reason) {
     maxLives++;
-    safePlaySound('levelup');
+    // 보스나 보호막 헬리콥터 파괴 시에는 levelup 효과음 대신 explosion 효과음이 별도로 재생됨
+    if (reason !== '보스 파괴' && reason !== '보호막 헬리콥터 파괴') {
+        safePlaySound('levelup');
+    }
     console.log(`목숨 증가: ${reason}, 현재 목숨: ${maxLives}`);
 }
 
