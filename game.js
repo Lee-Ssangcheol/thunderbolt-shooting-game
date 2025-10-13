@@ -104,12 +104,7 @@ class GameSoundManager {
         
         for (const soundName of soundFiles) {
             try {
-                let soundPath;
-                if (window.electronAPI) {
-                    soundPath = await window.electronAPI.getSoundPath(`${soundName}.mp3`);
-                } else {
-                    soundPath = `sounds/${soundName}.mp3`;
-                }
+                const soundPath = `sounds/${soundName}.mp3`;
                 
                 console.log(`Loading sound with Web Audio API: ${soundName} from ${soundPath}`);
                 
@@ -150,12 +145,7 @@ class GameSoundManager {
     // 단일 사운드를 HTML5 Audio로 로드
     async loadSingleSoundWithHTML5Audio(soundName) {
         try {
-            let soundPath;
-            if (window.electronAPI) {
-                soundPath = await window.electronAPI.getSoundPath(`${soundName}.mp3`);
-            } else {
-                soundPath = `sounds/${soundName}.mp3`;
-            }
+            const soundPath = `sounds/${soundName}.mp3`;
             
             console.log(`Loading sound with HTML5 Audio: ${soundName} from ${soundPath}`);
             
@@ -429,26 +419,14 @@ class GameSoundManager {
 // 전역 사운드 매니저 인스턴스 생성
 const gameSoundManager = new GameSoundManager();
 
-// window.electronAPI가 준비될 때까지 대기 후 사운드 초기화
-const waitForAPIAndInitSounds = () => {
-    console.log('waitForAPIAndInitSounds 호출됨');
-    console.log('window.electronAPI 존재:', !!window.electronAPI);
-    
-    if (window.electronAPI) {
-        console.log('Electron API 발견, 사운드 매니저 초기화 시작');
-        gameSoundManager.initialize().then(() => {
-            console.log('사운드 매니저 초기화 완료 (Promise)');
-        }).catch(error => {
-            console.error('사운드 매니저 초기화 실패 (Promise):', error);
-        });
-    } else {
-        console.log('Electron API 없음, 웹 환경으로 사운드 매니저 초기화');
-        gameSoundManager.initialize().then(() => {
-            console.log('웹 환경 사운드 매니저 초기화 완료');
-        }).catch(error => {
-            console.error('웹 환경 사운드 매니저 초기화 실패:', error);
-        });
-    }
+// 웹용 사운드 초기화 함수
+const initWebSounds = () => {
+    console.log('웹용 사운드 초기화 시작');
+    gameSoundManager.initialize().then(() => {
+        console.log('사운드 매니저 초기화 완료');
+    }).catch(error => {
+        console.error('사운드 매니저 초기화 실패:', error);
+    });
 };
 
 // 사운드 초기화 시작
@@ -456,7 +434,7 @@ console.log('사운드 초기화 시작');
 
 // 사용자 상호작용 후 사운드 초기화 (브라우저 정책 준수)
 const initSoundsAfterInteraction = () => {
-    waitForAPIAndInitSounds();
+    initWebSounds();
     // 이벤트 리스너 제거
     document.removeEventListener('click', initSoundsAfterInteraction);
     document.removeEventListener('keydown', initSoundsAfterInteraction);
@@ -472,7 +450,7 @@ document.addEventListener('touchstart', initSoundsAfterInteraction, { once: true
 setTimeout(() => {
     if (!gameSoundManager.initialized) {
         console.log('자동 사운드 초기화 시도');
-        waitForAPIAndInitSounds();
+        initWebSounds();
     }
 }, 1000);
 
