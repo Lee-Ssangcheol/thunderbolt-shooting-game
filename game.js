@@ -41,7 +41,7 @@ class GameSoundManager {
         this.audioContext = null;
         this.audioBuffers = {};  // Web Audio API용 오디오 버퍼
         this.initialized = false;
-        this.volume = 0.5;
+        this.volume = 0.5;  // 기본 볼륨 (스페이스용과 동일)
         this.enabled = true;
         this.lastCollisionTime = 0;
         this.collisionSoundCooldown = 300;
@@ -50,47 +50,26 @@ class GameSoundManager {
 
     async initialize() {
         if (this.initialized) {
-            console.log('사운드 매니저가 이미 초기화됨');
             return;
         }
         
-        console.log('사운드 매니저 초기화 시작');
         try {
             // Web Audio API 초기화
             if (typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined') {
                 this.audioContext = new (AudioContext || webkitAudioContext)();
-                console.log('Web Audio API 초기화 완료');
                 
                 // Web Audio API를 사용하여 사운드 로드
                 await this.loadSoundsWithWebAudioAPI();
             } else {
-                console.log('Web Audio API를 지원하지 않음, HTML5 Audio 사용');
                 this.useWebAudioAPI = false;
                 await this.loadSoundsWithHTML5Audio();
             }
             
             this.initialized = true;
-            console.log('사운드 매니저 초기화 완료, 사운드 개수:', Object.keys(this.sounds).length);
-            
-            // 초기화된 사운드 상태 확인
-            Object.keys(this.sounds).forEach(soundName => {
-                const sound = this.sounds[soundName];
-                console.log(`사운드 ${soundName}: src=${sound.src}, readyState=${sound.readyState}`);
-            });
-            
-            // 1초 후 사운드 상태 재확인
-            setTimeout(() => {
-                console.log('=== 1초 후 사운드 상태 재확인 ===');
-                Object.keys(this.sounds).forEach(soundName => {
-                    const sound = this.sounds[soundName];
-                    console.log(`사운드 ${soundName}: src=${sound.src}, readyState=${sound.readyState}, duration=${sound.duration}`);
-                });
-            }, 1000);
             
         } catch (error) {
             console.error('사운드 초기화 실패:', error);
             // Web Audio API 실패 시 HTML5 Audio로 fallback
-            console.log('Web Audio API 실패, HTML5 Audio로 fallback');
             this.useWebAudioAPI = false;
             await this.loadSoundsWithHTML5Audio();
             this.initialized = true;
@@ -99,14 +78,11 @@ class GameSoundManager {
     
     // Web Audio API를 사용한 사운드 로드
     async loadSoundsWithWebAudioAPI() {
-        console.log('Web Audio API로 사운드 로드 시작');
         const soundFiles = ['shoot', 'explosion', 'collision', 'levelup', 'warning'];
         
         for (const soundName of soundFiles) {
             try {
                 const soundPath = `sounds/${soundName}.mp3`;
-                
-                console.log(`Loading sound with Web Audio API: ${soundName} from ${soundPath}`);
                 
                 // Fetch API로 오디오 파일 로드
                 const response = await fetch(soundPath);
@@ -122,8 +98,6 @@ class GameSoundManager {
                 this.sounds[soundName].volume = this.volume;
                 this.sounds[soundName].preload = 'auto';
                 
-                console.log(`사운드 로딩 완료 (Web Audio API): ${soundName}`);
-                
             } catch (error) {
                 console.error(`Web Audio API 사운드 로딩 실패 (${soundName}):`, error);
                 // Web Audio API 실패 시 HTML5 Audio만 사용
@@ -134,7 +108,6 @@ class GameSoundManager {
     
     // HTML5 Audio를 사용한 사운드 로드
     async loadSoundsWithHTML5Audio() {
-        console.log('HTML5 Audio로 사운드 로드 시작');
         const soundFiles = ['shoot', 'explosion', 'collision', 'levelup', 'warning'];
         
         for (const soundName of soundFiles) {
@@ -147,8 +120,6 @@ class GameSoundManager {
         try {
             const soundPath = `sounds/${soundName}.mp3`;
             
-            console.log(`Loading sound with HTML5 Audio: ${soundName} from ${soundPath}`);
-            
             this.sounds[soundName] = new Audio();
             this.sounds[soundName].src = soundPath;
             this.sounds[soundName].volume = this.volume;
@@ -156,7 +127,7 @@ class GameSoundManager {
             
             // 로딩 완료 이벤트 리스너
             this.sounds[soundName].addEventListener('canplaythrough', () => {
-                console.log(`사운드 로딩 완료 (HTML5): ${soundName}`);
+                // 로딩 완료
             });
             
             this.sounds[soundName].addEventListener('error', (e) => {
@@ -172,38 +143,34 @@ class GameSoundManager {
     }
 
     async play(soundName, options = {}) {
-        console.log('GameSoundManager.play 호출됨:', soundName);
-        console.log('사운드 매니저 활성화 상태:', this.enabled);
-        console.log('사운드 매니저 초기화 상태:', this.initialized);
-        
         if (!this.enabled || !this.sounds[soundName]) {
             return;
         }
-        
-        console.log('사운드 파일 존재함:', soundName);
         // 충돌음의 경우 쿨다운 적용
         if (soundName === 'collision') {
             const now = Date.now();
             if (now - this.lastCollisionTime < this.collisionSoundCooldown) {
-                console.log('충돌음 쿨다운 중 - 재생 건너뜀');
                 return;
             }
             this.lastCollisionTime = now;
         }
         
         try {
+            // 볼륨 계산 (스페이스용과 동일한 방식)
+            const volume = options.volume !== undefined ? options.volume : this.volume;
+            
             // Web Audio API를 사용한 고품질 재생 시도
             if (this.useWebAudioAPI && this.audioContext && this.audioBuffers[soundName]) {
-                await this.playWithWebAudioAPI(soundName, options);
+                await this.playWithWebAudioAPI(soundName, volume);
             } else {
                 // HTML5 Audio를 사용한 재생
-                await this.playWithHTML5Audio(soundName, options);
+                await this.playWithHTML5Audio(soundName, volume);
             }
         } catch (e) {
             console.error('Audio play failed:', e);
             // 재생 실패 시 HTML5 Audio로 fallback
             try {
-                await this.playWithHTML5Audio(soundName, options);
+                await this.playWithHTML5Audio(soundName, volume);
             } catch (fallbackError) {
                 console.error('Fallback audio play also failed:', fallbackError);
             }
@@ -211,7 +178,7 @@ class GameSoundManager {
     }
     
     // Web Audio API를 사용한 고품질 사운드 재생
-    async playWithWebAudioAPI(soundName, options = {}) {
+    async playWithWebAudioAPI(soundName, volume) {
         try {
             if (this.audioContext.state === 'suspended') {
                 await this.audioContext.resume();
@@ -230,13 +197,10 @@ class GameSoundManager {
             gainNode.connect(this.audioContext.destination);
             
             // 볼륨 설정 (스페이스용과 동일한 방식)
-            const volume = options.volume !== undefined ? options.volume : this.volume;
             gainNode.gain.value = volume;
             
             // 사운드 재생
             source.start(0);
-            
-            console.log('Web Audio API로 사운드 재생 성공:', soundName);
             
             // 재생 완료 후 정리
             source.onended = () => {
@@ -251,7 +215,7 @@ class GameSoundManager {
     }
     
     // HTML5 Audio를 사용한 사운드 재생
-    async playWithHTML5Audio(soundName, options = {}) {
+    async playWithHTML5Audio(soundName, volume) {
         try {
             const sound = this.sounds[soundName];
             
@@ -263,7 +227,6 @@ class GameSoundManager {
             
             // 사운드가 로딩되지 않은 경우 대기
             if (sound.readyState < 2) { // HAVE_CURRENT_DATA 미만
-                console.log('사운드 로딩 대기 중:', soundName);
                 await new Promise(resolve => {
                     const onCanPlay = () => {
                         sound.removeEventListener('canplaythrough', onCanPlay);
@@ -287,7 +250,6 @@ class GameSoundManager {
                     const timeoutId = setTimeout(() => {
                         sound.removeEventListener('canplaythrough', onCanPlay);
                         sound.removeEventListener('error', onError);
-                        console.log('사운드 로딩 타임아웃:', soundName);
                         resolve();
                     }, 3000);
                 });
@@ -295,14 +257,12 @@ class GameSoundManager {
             
             // 사운드 재생 (스페이스용과 동일한 방식)
             sound.currentTime = 0;
-            const volume = options.volume !== undefined ? options.volume : this.volume;
             sound.volume = volume;
             
             // 사운드 품질 향상을 위한 추가 설정
             sound.playbackRate = 1.0;
             sound.preservesPitch = true;
             
-            console.log('HTML5 Audio로 사운드 재생 시도:', soundName);
             await sound.play();
             
         } catch (error) {
@@ -337,7 +297,6 @@ class GameSoundManager {
         // Web Audio API 볼륨도 조정
         if (this.audioContext && this.audioContext.state === 'running') {
             // 오디오 컨텍스트의 마스터 볼륨 조정
-            console.log('Web Audio API 볼륨 조정:', this.volume);
         }
     }
 
@@ -358,53 +317,12 @@ class GameSoundManager {
     
     // 사운드 품질 진단
     diagnoseSoundQuality(soundName) {
-        console.log(`=== 사운드 품질 진단 - ${soundName} ===`);
-        
-        if (this.sounds[soundName]) {
-            const sound = this.sounds[soundName];
-            console.log('HTML5 Audio 정보:');
-            console.log('  - src:', sound.src);
-            console.log('  - readyState:', sound.readyState);
-            console.log('  - duration:', sound.duration);
-            console.log('  - volume:', sound.volume);
-            console.log('  - paused:', sound.paused);
-            console.log('  - ended:', sound.ended);
-            console.log('  - error:', sound.error);
-        } else {
-            console.log('HTML5 Audio: 사운드가 존재하지 않음');
-        }
-        
-        if (this.audioBuffers[soundName]) {
-            const buffer = this.audioBuffers[soundName];
-            console.log('Web Audio API 정보:');
-            console.log('  - duration:', buffer.duration);
-            console.log('  - numberOfChannels:', buffer.numberOfChannels);
-            console.log('  - sampleRate:', buffer.sampleRate);
-            console.log('  - length:', buffer.length);
-        } else {
-            console.log('Web Audio API: 오디오 버퍼가 존재하지 않음');
-        }
-        
-        if (this.audioContext) {
-            console.log('Web Audio API 컨텍스트:');
-            console.log('  - 상태:', this.audioContext.state);
-            console.log('  - 샘플레이트:', this.audioContext.sampleRate);
-            console.log('  - 현재 시간:', this.audioContext.currentTime);
-        } else {
-            console.log('Web Audio API: 컨텍스트가 존재하지 않음');
-        }
-        
-        console.log('사용 중인 재생 방식:', this.useWebAudioAPI ? 'Web Audio API' : 'HTML5 Audio');
-        console.log('=====================================');
+        // 진단 기능 비활성화 (성능 최적화)
     }
     
     // 모든 사운드 품질 진단
     diagnoseAllSounds() {
-        console.log('=== 모든 사운드 품질 진단 ===');
-        Object.keys(this.sounds).forEach(soundName => {
-            this.diagnoseSoundQuality(soundName);
-        });
-        console.log('=== 진단 완료 ===');
+        // 진단 기능 비활성화 (성능 최적화)
     }
 }
 
@@ -413,16 +331,15 @@ const gameSoundManager = new GameSoundManager();
 
 // 웹용 사운드 초기화 함수
 const initWebSounds = () => {
-    console.log('웹용 사운드 초기화 시작');
     gameSoundManager.initialize().then(() => {
-        console.log('사운드 매니저 초기화 완료');
+        // 전역 볼륨 적용 (스페이스용과 동일)
+        applyGlobalVolume();
     }).catch(error => {
         console.error('사운드 매니저 초기화 실패:', error);
     });
 };
 
 // 사운드 초기화 시작
-console.log('사운드 초기화 시작');
 
 // 사용자 상호작용 후 사운드 초기화 (브라우저 정책 준수)
 const initSoundsAfterInteraction = () => {
@@ -441,7 +358,6 @@ document.addEventListener('touchstart', initSoundsAfterInteraction, { once: true
 // 자동 초기화도 시도 (일부 브라우저에서 작동)
 setTimeout(() => {
     if (!gameSoundManager.initialized) {
-        console.log('자동 사운드 초기화 시도');
         initWebSounds();
     }
 }, 1000);
@@ -506,6 +422,15 @@ let shieldedHelicopterDestroyed = 0;  // 보호막 헬리콥터 파괴 카운터
 let lifeWarningBlinkTimer = 0;  // 목숨 경고 깜빡임 타이머
 let lifeWarningBlinkDuration = 2000;  // 목숨 경고 깜빡임 지속 시간 (2초)
 let lastLifeCount = 0;  // 이전 목숨 개수 (변화 감지용)
+
+// === 사운드 볼륨 전역 변수 및 함수 추가 (스페이스용과 동일) ===
+let globalVolume = 0.1;  // 전역 볼륨 (10%)
+let isMuted = false;
+
+function applyGlobalVolume() {
+    const vol = isMuted ? 0 : Math.min(1, Math.max(0, globalVolume));
+    gameSoundManager.setVolume(vol);
+}
 
 // 보스 패턴 상수 삭제됨
 
@@ -1207,11 +1132,8 @@ function createEnemy() {
     const isHelicopter = Math.random() < Math.min(0.4, 0.2 + (gameLevel * 0.03)); // 최대 40%로 제한
     
     if (!isBossActive && isHelicopter) {
-        console.log(`헬리콥터 생성 시도: 레벨 ${gameLevel}, 확률: ${Math.min(0.4, 0.2 + (gameLevel * 0.03))}`);
-        
         // 보호막 헬리콥터 생성 가능 여부 확인
         if (!canCreateShieldedHelicopter()) {
-            console.log('보호막 헬리콥터 생성 불가 - 일반 비행기로 대체');
             // 헬리콥터 생성이 불가능하면 일반 비행기 생성으로 넘어감
         } else {
             // 일반 헬리콥터와 helicopter2 중에서 선택 (보호막 헬리콥터는 30% 확률로 생성)
@@ -1316,7 +1238,6 @@ function createEnemy() {
             }
 
             enemies.push(helicopter);
-            console.log('헬리콥터1 생성됨:', helicopter);
             return;
         }
         }
@@ -1407,7 +1328,7 @@ function handleEnemyBullets() {
             handleCollision();
             explosions.push(new Explosion(bullet.x, bullet.y, false));
             // 적 총알 피격 시 shoot 효과음 재생
-            safePlaySound('shoot');
+            safePlaySound('shoot', { volume: 0.4 });
             return false;
         }
         // 플레이어 총알과의 충돌 체크 (충돌 이펙트/음으로 변경)
@@ -1422,7 +1343,7 @@ function handleEnemyBullets() {
                     pulse: 0     // 펄스 효과를 위한 변수 추가
                 });
                 // 플레이어 총알과 적 총알 충돌 시 shoot 효과음 재생
-                safePlaySound('shoot');
+                safePlaySound('shoot', { volume: 0.4 });
                 bullets.splice(i, 1);
                 return false;
             }
@@ -1807,11 +1728,8 @@ function showLifeAddedMessage() {
 
 // 충돌 처리 함수 수정
 function handleCollision(collisionId = null) {
-    console.log('handleCollision 호출됨:', { playerY: player.y, TOP_EFFECT_ZONE, collisionId });
-    
     // 충돌 ID가 제공된 경우 중복 처리 방지
     if (collisionId && processedCollisions.has(collisionId)) {
-        console.log('이미 처리된 충돌:', collisionId);
         return;
     }
     
@@ -1822,7 +1740,6 @@ function handleCollision(collisionId = null) {
     
     // 상단 효과 무시 영역 체크
     if (player.y < TOP_EFFECT_ZONE) {
-        console.log('상단 효과 무시 영역 - 충돌 처리 건너뜀');
         return;
     }
     
@@ -2412,7 +2329,7 @@ function handleSnakePattern() {
                             enemy.y + enemy.height/2
                         ));
                         updateScore(100);
-                        safePlaySound('shoot');
+                        safePlaySound('shoot', { volume: 0.4 });
                         enemy.isHit = true;
                         return false;
                     }
@@ -2481,11 +2398,10 @@ function checkEnemyCollisions(enemy) {
                     enemy.shieldActive = false;
                     
                     // 보호막 헬리콥터 파괴 카운터 증가 (헬리콥터1과 헬리콥터2 모두)
-                    if (enemy.type === ENEMY_TYPES.HELICOPTER || enemy.type === ENEMY_TYPES.HELICOPTER2) {
-                        shieldedHelicopterDestroyed++;
-                        console.log(`보호막 헬리콥터 파괴됨: ${enemy.type}, 총 파괴 수: ${shieldedHelicopterDestroyed}`);
-                        
-                        // 1대 파괴할 때마다 목숨 1개 추가
+            if (enemy.type === ENEMY_TYPES.HELICOPTER || enemy.type === ENEMY_TYPES.HELICOPTER2) {
+                shieldedHelicopterDestroyed++;
+                
+                // 1대 파괴할 때마다 목숨 1개 추가
                         if (shieldedHelicopterDestroyed % 1 === 0) {
                             handleLifeIncrease('보호막 헬리콥터 파괴');
                         }
@@ -2500,12 +2416,12 @@ function checkEnemyCollisions(enemy) {
                     ));
                     
                     // 보호막 파괴음 (폭발음만)
-                    safePlaySound('explosion');
+                    safePlaySound('explosion', { volume: 0.8 });
                     // 보호막 헬리콥터 파괴 시 추가 폭발 효과음
-                    safePlaySound('explosion', { volume: 0.5 });
+                    safePlaySound('explosion', { volume: 1.0 });
                 } else {
                     // 보호막 피격음 (shoot 효과음만)
-                    safePlaySound('shoot');
+                    safePlaySound('shoot', { volume: 0.4 });
                 }
                 
                 // 총알 제거
@@ -2557,7 +2473,7 @@ function checkEnemyCollisions(enemy) {
                 }
                 
                 // 보스 피격음 재생 (shoot 효과음만)
-                safePlaySound('shoot');
+                safePlaySound('shoot', { volume: 0.4 });
                 
                 // 피격 시간이 15초를 넘으면 화면을 벗어나도록 설정
                 const totalTime = currentTime - enemy.lastUpdateTime;
@@ -2608,7 +2524,7 @@ function checkEnemyCollisions(enemy) {
                     console.log(`헬리콥터 파괴: 레벨 ${gameLevel}, 점수 ${enemy.score || 150}, 특수무기 개수 ${specialWeaponCount}`);
                     updateScore(enemy.score || 150);
                     // 헬리콥터 파괴 시 폭발 효과음 재생
-                    safePlaySound('explosion', { volume: 0.5 });
+                    safePlaySound('explosion', { volume: 1.0 });
                 } else {
                     // 일반 비행기 파괴 시 기존 효과
                     console.log(`일반 비행기 파괴: 레벨 ${gameLevel}, 점수 10, 특수무기 개수 ${specialWeaponCount}`);
@@ -2616,7 +2532,7 @@ function checkEnemyCollisions(enemy) {
                 }
                 
                 // 추가: 플레이어 총알이 적 비행기/헬기에 명중 시 발사음 재생
-                safePlaySound('shoot');
+                safePlaySound('shoot', { volume: 0.4 });
             }
                         
             isHit = true;
@@ -2735,7 +2651,7 @@ function handleBulletFiring() {
         
         // 발사음 재생
         if (currentTime - lastFireTime >= 20) {
-            safePlaySound('shoot');
+            safePlaySound('shoot', { volume: 0.4 });
         }
         
         // 일정 시간 후 다시 발사 가능하도록 설정
@@ -3163,7 +3079,7 @@ document.addEventListener('keyup', (e) => {
 
 // 게임 오버 시 점수 처리 수정
 function handleGameOver() {
-    safePlaySound('explosion', { volume: 0.5 }); // 플레이어 폭발음 볼륨 증가
+    safePlaySound('explosion', { volume: 1.0 }); // 플레이어 폭발음 볼륨 최대
     try {
         if (!isGameOver) {
             isGameOver = true;
@@ -3370,7 +3286,7 @@ function handleBullets() {
                 // 총알 충돌 시 작은 폭발 효과
                 explosions.push(new Explosion(bullet.x, bullet.y, false));
                 // 보스 총알 피격 시 shoot 효과음 재생
-                safePlaySound('shoot');
+                safePlaySound('shoot', { volume: 0.4 });
                 return false;
             }
         } else if (bullet.isSpecial) {
@@ -3414,7 +3330,7 @@ function handleBullets() {
                 // 충돌 시 폭발 효과 추가
                 explosions.push(new Explosion(helicopterBullet.x, helicopterBullet.y, false));
                 // 헬리콥터 총알 피격 시 shoot 효과음 재생
-                safePlaySound('shoot');
+                safePlaySound('shoot', { volume: 0.4 });
                 // 헬리콥터 총알 제거
                 helicopterBullets.splice(i, 1);
                 // 플레이어 총알도 제거
@@ -3428,7 +3344,7 @@ function handleBullets() {
                 // 폭탄 폭발
                 explosions.push(new Explosion(bomb.x, bomb.y, true));
                 // 폭탄 피격 시 shoot 효과음 재생
-                safePlaySound('shoot');
+                safePlaySound('shoot', { volume: 0.4 });
                 return false;
             }
             return true;
@@ -3440,7 +3356,7 @@ function handleBullets() {
                 // 다이나마이트 폭발
                 explosions.push(new Explosion(dynamite.x, dynamite.y, true));
                 // 다이너마이트 피격 시 shoot 효과음 재생
-                safePlaySound('shoot');
+                safePlaySound('shoot', { volume: 0.4 });
                 return false;
             }
             return true;
@@ -3473,7 +3389,7 @@ let lastBossSpawnTime = Date.now();  // 마지막 보스 출현 시간을 현재
 
 // 보스 생성 함수 수정
 function createBoss() {
-    safePlaySound('explosion');
+    safePlaySound('explosion', { volume: 0.9 }); // 보스 생성 시 폭발음
     console.log('보스 헬리콥터 생성 함수 호출됨');
     
     // 이미 보스가 존재하는 경우
@@ -4377,7 +4293,7 @@ function handleBombs() {
             handleCollision(collisionId);
             explosions.push(new Explosion(bomb.x, bomb.y, true));
             // 폭탄 충돌 시 폭발음 재생
-            safePlaySound('explosion');
+            safePlaySound('explosion', { volume: 0.8 });
             return false; // 폭탄 즉시 제거로 중복 충돌 방지
         }
         
@@ -4502,7 +4418,7 @@ function handleDynamites() {
             handleCollision(collisionId);
             explosions.push(new Explosion(dynamite.x, dynamite.y, true));
             // 다이너마이트 충돌 시 폭발음 재생
-            safePlaySound('explosion');
+            safePlaySound('explosion', { volume: 0.8 });
             return false; // 다이너마이트 즉시 제거로 중복 충돌 방지
         }
         
@@ -4937,7 +4853,7 @@ function handleHelicopterBullets() {
                 explosions.push(new Explosion(bullet.x, bullet.y, false));
                 
                 // 플레이어 총알과 적 총알 충돌 시 shoot 효과음 재생
-                safePlaySound('shoot');
+                safePlaySound('shoot', { volume: 0.4 });
                 
                 bullets.splice(i, 1);
                 return false; // 충돌한 헬리콥터 총알 제거
@@ -4949,7 +4865,7 @@ function handleHelicopterBullets() {
             handleCollision();
             explosions.push(new Explosion(bullet.x, bullet.y, false));
             // 헬리콥터 총알 피격 시 shoot 효과음 재생
-            safePlaySound('shoot');
+            safePlaySound('shoot', { volume: 0.4 });
             return false;
         }
         
@@ -5200,7 +5116,7 @@ function handleBossDestruction(boss, isSpecialWeapon = false) {
     lastBossSpawnTime = Date.now();
     
     // 보스 파괴 시 폭발 효과음 재생 (폭발음만)
-    safePlaySound('explosion', { volume: 0.5 });
+    safePlaySound('explosion', { volume: 1.0 });
     
     console.log('보스 파괴 완료');
     return true;
@@ -5476,11 +5392,11 @@ window.addEventListener('keydown', (e) => {
     }
 });
 
-// ===== 사운드 컨트롤 패널 동적 생성 및 연동 =====
+// ===== 사운드 컨트롤 패널 복원 =====
 function createSoundControlPanel() {
     const panel = document.createElement('div');
     panel.id = 'sound-control-panel';
-    panel.style.position = 'static'; // fixed에서 static으로 변경
+    panel.style.position = 'static';
     panel.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
     panel.style.padding = '12px';
     panel.style.borderRadius = '8px';
@@ -5495,7 +5411,7 @@ function createSoundControlPanel() {
     panel.style.gap = '5px';
     panel.style.boxSizing = 'border-box';
     panel.style.boxShadow = '0 2px 12px rgba(0,0,0,0.2)';
-    panel.style.margin = '0 auto'; // 가운데 정렬
+    panel.style.margin = '0 auto';
 
     // 볼륨 컨트롤 추가
     const volumeControl = document.createElement('div');
@@ -5515,7 +5431,6 @@ function createSoundControlPanel() {
     if (canvasContainer && canvasContainer.parentNode) {
         canvasContainer.parentNode.insertBefore(panel, canvasContainer.nextSibling);
     } else {
-        // fallback: body에 추가
         document.body.appendChild(panel);
     }
     setupSoundControlEvents();
@@ -5527,31 +5442,29 @@ function setupSoundControlEvents() {
     const volumeValue = document.getElementById('volume-value');
     
     if (sfxVolumeSlider && volumeValue) {
-        // 초기 볼륨 설정 - 기본값 10%로 설정
+        // 초기 볼륨 설정
         const initialVolume = 10;
         sfxVolumeSlider.value = initialVolume;
         volumeValue.textContent = `${initialVolume}%`;
         
-        // 사운드 매니저도 10%로 설정 (스페이스용과 동일한 방식)
-        gameSoundManager.setVolume(0.1);
+        // 전역 볼륨 설정
+        globalVolume = 0.1;
+        applyGlobalVolume();
         
         sfxVolumeSlider.addEventListener('input', function(e) {
-            e.stopPropagation();  // 이벤트 전파 중단
-            const volume = this.value / 100;  // 0-1 사이의 값으로 변환
+            e.stopPropagation();
+            globalVolume = parseFloat(this.value / 100);
             volumeValue.textContent = `${this.value}%`;
-            
-            // 사운드 매니저를 통해 볼륨 업데이트
-            gameSoundManager.setVolume(volume);
+            applyGlobalVolume();
         });
 
-        // 마우스 이벤트가 다른 요소에 영향을 주지 않도록 처리
         sfxVolumeSlider.addEventListener('mousedown', function(e) {
             e.stopPropagation();
         });
         
         sfxVolumeSlider.addEventListener('mouseup', function(e) {
             e.stopPropagation();
-            this.blur();  // 포커스 제거
+            this.blur();
         });
     }
 }
@@ -5563,20 +5476,14 @@ function setupPanelDrag(panel) {
     let currentY;
     let initialX;
     let initialY;
-    let xOffset = 0;
-    let yOffset = 0;
-    let originalPosition = 'static';
 
-    // 드래그 시작
     panel.addEventListener('mousedown', (e) => {
-        if (e.target.tagName === 'INPUT') return;  // 볼륨 슬라이더는 드래그 방지
+        if (e.target.tagName === 'INPUT') return;
         
         if (e.target === panel || e.target.parentNode === panel) {
             isDragging = true;
             
-            // 드래그 시작 시 position을 absolute로 변경
             if (panel.style.position === 'static') {
-                originalPosition = 'static';
                 panel.style.position = 'absolute';
                 panel.style.top = '50%';
                 panel.style.left = '50%';
@@ -5588,34 +5495,30 @@ function setupPanelDrag(panel) {
             initialX = e.clientX - rect.left;
             initialY = e.clientY - rect.top;
             
-            panel.style.transition = 'none';  // 드래그 중 애니메이션 제거
+            panel.style.transition = 'none';
         }
     });
 
-    // 드래그 중
     document.addEventListener('mousemove', (e) => {
         if (isDragging) {
-            e.preventDefault();  // 드래그 중 기본 동작 방지
+            e.preventDefault();
             
             currentX = e.clientX - initialX;
             currentY = e.clientY - initialY;
             
-            // 패널 위치 업데이트
             panel.style.left = `${currentX}px`;
             panel.style.top = `${currentY}px`;
-            panel.style.transform = 'none'; // transform 초기화
+            panel.style.transform = 'none';
         }
     });
 
-    // 드래그 종료
     document.addEventListener('mouseup', () => {
         if (isDragging) {
             isDragging = false;
-            panel.style.transition = 'transform 0.1s ease';  // 드래그 종료 후 애니메이션 복원
+            panel.style.transition = 'transform 0.1s ease';
         }
     });
 
-    // 마우스가 창 밖으로 나갈 때 드래그 종료
     document.addEventListener('mouseleave', () => {
         if (isDragging) {
             isDragging = false;
@@ -6003,7 +5906,7 @@ function handleBossSpreadBullets() {
             // 총알 충돌 시 작은 폭발 효과
             explosions.push(new Explosion(bullet.x, bullet.y, false));
             // 보스 확산탄 피격 시 shoot 효과음 재생
-            safePlaySound('shoot');
+            safePlaySound('shoot', { volume: 0.4 });
             return false;
         }
         
