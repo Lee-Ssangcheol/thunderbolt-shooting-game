@@ -5453,13 +5453,16 @@ function setupSoundControlEvents() {
         sfxVolumeSlider.value = initialVolume;
         volumeValue.textContent = `${initialVolume}%`;
         
-        // 전역 볼륨 설정
+        // 전역 볼륨 설정 (슬라이더바 10% = 실제 볼륨 50%)
         globalVolume = 0.5;
         applyGlobalVolume();
         
         sfxVolumeSlider.addEventListener('input', function(e) {
             e.stopPropagation();
-            globalVolume = parseFloat(this.value / 100);
+            // 슬라이더바 값(0-100)을 실제 볼륨(0-1)으로 변환
+            // 슬라이더바 10% = 실제 볼륨 0.5 (50%)
+            const sliderValue = parseInt(this.value);
+            globalVolume = sliderValue / 100; // 슬라이더바 값을 그대로 사용
             volumeValue.textContent = `${this.value}%`;
             applyGlobalVolume();
         });
