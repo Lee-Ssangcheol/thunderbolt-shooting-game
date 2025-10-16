@@ -44,7 +44,7 @@ class GameSoundManager {
         this.volume = 1.0;  // 기본 볼륨 (최대 볼륨)
         this.enabled = true;
         this.lastCollisionTime = 0;
-        this.collisionSoundCooldown = 300;
+        this.collisionSoundCooldown = 50;  // 충돌음 쿨다운을 50ms로 단축
         this.useWebAudioAPI = true;  // Web Audio API 사용 여부
     }
 
@@ -1327,8 +1327,8 @@ function handleEnemyBullets() {
         if (checkCollision(bullet, player) || (hasSecondPlane && checkCollision(bullet, secondPlane))) {
             handleCollision();
             explosions.push(new Explosion(bullet.x, bullet.y, false));
-            // 적 총알 피격 시 shoot 효과음 재생
-            safePlaySound('shoot', { volume: 0.4 });
+            // 플레이어와 적 총알 충돌 시 경고음만 재생
+            safePlaySound('warning');
             return false;
         }
         // 플레이어 총알과의 충돌 체크 (충돌 이펙트/음으로 변경)
@@ -2420,8 +2420,8 @@ function checkEnemyCollisions(enemy) {
                     // 보호막 헬리콥터 파괴 시 추가 폭발 효과음
                     safePlaySound('explosion', { volume: 1.0 });
                 } else {
-                    // 보호막 피격음 (shoot 효과음만)
-                    safePlaySound('shoot', { volume: 0.4 });
+                    // 보호막 피격음 (충돌음만) - 볼륨 증가
+                    safePlaySound('collision', { volume: 0.8 });
                 }
                 
                 // 총알 제거
@@ -2472,8 +2472,8 @@ function checkEnemyCollisions(enemy) {
                     }
                 }
                 
-                // 보스 피격음 재생 (shoot 효과음만)
-                safePlaySound('shoot', { volume: 0.4 });
+                // 보스 피격음 재생 (충돌음만) - 볼륨 증가
+                safePlaySound('collision', { volume: 0.8 });
                 
                 // 피격 시간이 15초를 넘으면 화면을 벗어나도록 설정
                 const totalTime = currentTime - enemy.lastUpdateTime;
@@ -2531,8 +2531,11 @@ function checkEnemyCollisions(enemy) {
                     updateScore(10);
                 }
                 
-                // 추가: 플레이어 총알이 적 비행기/헬기에 명중 시 발사음 재생
-                safePlaySound('shoot', { volume: 0.4 });
+                // 추가: 플레이어 총알이 적 비행기/헬기에 명중 시 발사음 재생 (보스/보호막 비행기 제외)
+                if (enemy.type !== ENEMY_TYPES.BOSS && 
+                    !((enemy.type === ENEMY_TYPES.HELICOPTER || enemy.type === ENEMY_TYPES.HELICOPTER2) && enemy.shieldActive)) {
+                    safePlaySound('shoot', { volume: 0.4 });
+                }
             }
                         
             isHit = true;
@@ -2649,10 +2652,7 @@ function handleBulletFiring() {
                     bullets.push(bullet);
         }
         
-        // 발사음 재생
-        if (currentTime - lastFireTime >= 20) {
-            safePlaySound('shoot', { volume: 0.4 });
-        }
+        // 발사음 제거
         
         // 일정 시간 후 다시 발사 가능하도록 설정
         setTimeout(() => {
@@ -2719,8 +2719,7 @@ function handleSpecialWeapon() {
             console.log('특수무기 개수 오류 수정 - 0으로 초기화');
         }
         
-        // 특수 무기 발사 효과음
-        safePlaySound('shoot');
+        // 특수 무기 발사 효과음 제거
         
         // V키 상태 초기화
         keys.KeyB = false;  // KeyN을 KeyB로 변경
@@ -3279,6 +3278,19 @@ function handleBullets() {
             
             ctx.restore();
             
+            // 보스 총알과 플레이어 총알 충돌 체크
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const playerBullet = bullets[i];
+                if (!playerBullet.isBossBullet && !playerBullet.isSpecial && checkCollision(bullet, playerBullet)) {
+                    // 충돌 시 폭발 효과 추가
+                    explosions.push(new Explosion(bullet.x, bullet.y, false));
+                    // 보스 총알과 플레이어 총알 충돌 시 shoot 효과음 재생
+                    safePlaySound('shoot', { volume: 0.4 });
+                    bullets.splice(i, 1);
+                    return false; // 충돌한 보스 총알 제거
+                }
+            }
+            
             // 보스 총알과 플레이어 충돌 체크
             if (checkCollision(bullet, player) || 
                 (hasSecondPlane && checkCollision(bullet, secondPlane))) {
@@ -3343,8 +3355,7 @@ function handleBullets() {
             if (checkCollision(bullet, bomb)) {
                 // 폭탄 폭발
                 explosions.push(new Explosion(bomb.x, bomb.y, true));
-                // 폭탄 피격 시 shoot 효과음 재생
-                safePlaySound('shoot', { volume: 0.4 });
+                // 폭탄 피격 시 효과음 제거
                 return false;
             }
             return true;
@@ -3355,8 +3366,7 @@ function handleBullets() {
             if (checkCollision(bullet, dynamite)) {
                 // 다이나마이트 폭발
                 explosions.push(new Explosion(dynamite.x, dynamite.y, true));
-                // 다이너마이트 피격 시 shoot 효과음 재생
-                safePlaySound('shoot', { volume: 0.4 });
+                // 다이너마이트 피격 시 효과음 제거
                 return false;
             }
             return true;
@@ -3389,7 +3399,7 @@ let lastBossSpawnTime = Date.now();  // 마지막 보스 출현 시간을 현재
 
 // 보스 생성 함수 수정
 function createBoss() {
-    safePlaySound('explosion', { volume: 0.9 }); // 보스 생성 시 폭발음
+    // 보스 생성 시 효과음 제거
     console.log('보스 헬리콥터 생성 함수 호출됨');
     
     // 이미 보스가 존재하는 경우
@@ -4074,7 +4084,7 @@ function getPowerUpColor(type) {
 
 // 파워업 효과 적용 함수 수정
 function applyPowerUp(type) {
-    safePlaySound('levelup');
+    // 파워업 효과음 제거
     switch(type) {
         case POWERUP_TYPES.SPEED_UP:
             player.speed *= 1.5;
@@ -4292,8 +4302,7 @@ function handleBombs() {
             bomb.hasCollided = true; // 중복 충돌 방지 플래그 설정
             handleCollision(collisionId);
             explosions.push(new Explosion(bomb.x, bomb.y, true));
-            // 폭탄 충돌 시 폭발음 재생
-            safePlaySound('explosion', { volume: 0.8 });
+            // 폭탄 충돌 시 폭발음 제거
             return false; // 폭탄 즉시 제거로 중복 충돌 방지
         }
         
@@ -4417,8 +4426,7 @@ function handleDynamites() {
             dynamite.hasCollided = true; // 중복 충돌 방지 플래그 설정
             handleCollision(collisionId);
             explosions.push(new Explosion(dynamite.x, dynamite.y, true));
-            // 다이너마이트 충돌 시 폭발음 재생
-            safePlaySound('explosion', { volume: 0.8 });
+            // 다이너마이트 충돌 시 폭발음 제거
             return false; // 다이너마이트 즉시 제거로 중복 충돌 방지
         }
         
@@ -4852,7 +4860,7 @@ function handleHelicopterBullets() {
                 console.log('충돌! 플레이어 총알과 헬기 총알', bullet, playerBullet);
                 explosions.push(new Explosion(bullet.x, bullet.y, false));
                 
-                // 플레이어 총알과 적 총알 충돌 시 shoot 효과음 재생
+                // 플레이어 총알과 헬리콥터 총알 충돌 시 shoot 효과음 재생
                 safePlaySound('shoot', { volume: 0.4 });
                 
                 bullets.splice(i, 1);
@@ -5068,9 +5076,7 @@ function handleEnemies() {
 function handleLifeIncrease(reason) {
     maxLives++;
     // 보스나 보호막 헬리콥터 파괴 시에는 levelup 효과음 대신 explosion 효과음이 별도로 재생됨
-    if (reason !== '보스 파괴' && reason !== '보호막 헬리콥터 파괴') {
-        safePlaySound('levelup');
-    }
+    // 나머지 경우에는 효과음 제거
     console.log(`목숨 증가: ${reason}, 현재 목숨: ${maxLives}`);
 }
 
@@ -5899,14 +5905,16 @@ function handleBossSpreadBullets() {
         // 보스 총알 그리기
         drawBossBullet(bullet);
         
+        // 보스 확산탄은 피격할 수 없음 (플레이어 총알과 충돌 체크 제거)
+        
         // 보스 총알과 플레이어 충돌 체크
         if (checkCollision(bullet, player) || 
             (hasSecondPlane && checkCollision(bullet, secondPlane))) {
             handleCollision();
             // 총알 충돌 시 작은 폭발 효과
             explosions.push(new Explosion(bullet.x, bullet.y, false));
-            // 보스 확산탄 피격 시 shoot 효과음 재생
-            safePlaySound('shoot', { volume: 0.4 });
+            // 보스 확산탄 피격 시 경고음 재생
+            safePlaySound('warning');
             return false;
         }
         
