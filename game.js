@@ -2420,8 +2420,8 @@ function checkEnemyCollisions(enemy) {
                     // 보호막 헬리콥터 파괴 시 추가 폭발 효과음
                     safePlaySound('explosion', { volume: 1.0 });
                 } else {
-                    // 보호막 피격음 (충돌음만) - 볼륨 증가
-                    safePlaySound('collision', { volume: 0.8 });
+                    // 보호막 피격음 (shoot 효과음) - 볼륨 증가
+                    safePlaySound('shoot', { volume: 0.8 });
                 }
                 
                 // 총알 제거
@@ -2472,8 +2472,8 @@ function checkEnemyCollisions(enemy) {
                     }
                 }
                 
-                // 보스 피격음 재생 (충돌음만) - 볼륨 증가
-                safePlaySound('collision', { volume: 0.8 });
+                // 보스 피격음 재생 (shoot 효과음) - 볼륨 증가
+                safePlaySound('shoot', { volume: 0.8 });
                 
                 // 피격 시간이 15초를 넘으면 화면을 벗어나도록 설정
                 const totalTime = currentTime - enemy.lastUpdateTime;
