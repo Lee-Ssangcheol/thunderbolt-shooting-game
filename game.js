@@ -41,7 +41,7 @@ class GameSoundManager {
         this.audioContext = null;
         this.audioBuffers = {};  // Web Audio API용 오디오 버퍼
         this.initialized = false;
-        this.volume = 0.5;  // 기본 볼륨 (스페이스용과 동일)
+        this.volume = 1.0;  // 기본 볼륨 (최대 볼륨)
         this.enabled = true;
         this.lastCollisionTime = 0;
         this.collisionSoundCooldown = 300;
@@ -424,7 +424,7 @@ let lifeWarningBlinkDuration = 2000;  // 목숨 경고 깜빡임 지속 시간 (
 let lastLifeCount = 0;  // 이전 목숨 개수 (변화 감지용)
 
 // === 사운드 볼륨 전역 변수 및 함수 추가 (스페이스용과 동일) ===
-let globalVolume = 0.1;  // 전역 볼륨 (10%)
+let globalVolume = 0.5;  // 전역 볼륨 (50% - 슬라이더바 기본값 10%에 맞춤)
 let isMuted = false;
 
 function applyGlobalVolume() {
@@ -5448,7 +5448,7 @@ function setupSoundControlEvents() {
         volumeValue.textContent = `${initialVolume}%`;
         
         // 전역 볼륨 설정
-        globalVolume = 0.1;
+        globalVolume = 0.5;
         applyGlobalVolume();
         
         sfxVolumeSlider.addEventListener('input', function(e) {
