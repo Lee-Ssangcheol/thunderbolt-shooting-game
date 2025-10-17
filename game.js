@@ -1043,13 +1043,16 @@ function restartGame() {
     dynamites = [];
     helicopterBullets = [];
     enemyBullets = [];
+    bossSpreadBullets = []; // 보스 확산탄 배열 초기화
     collisionEffects = [];
     
-    // 플레이어 위치 초기화
+    // 플레이어 위치 및 속도 초기화
     player.x = canvas.width / 2 - (240 * 0.7 * 0.7 * 0.8) / 2;
     player.y = canvas.height - 80; // 30픽셀 위로 올림
+    player.speed = 8; // 플레이어 속도 초기화
     secondPlane.x = canvas.width / 2 - 60;
     secondPlane.y = canvas.height - 80; // 30픽셀 위로 올림
+    secondPlane.speed = 8; // 두 번째 비행기 속도 초기화
     gameOverStartTime = null;
     
     // 현재 점수만 초기화 (최고 점수는 유지)
@@ -1065,7 +1068,9 @@ function restartGame() {
     
     // 보스 관련 상태 초기화
     bossActive = false;
+    isBossActive = false;
     bossHealth = 0;
+    bossPattern = 0;
     bossDestroyed = false;
     lastBossSpawnTime = Date.now();
     
@@ -1097,6 +1102,13 @@ function restartGame() {
     isContinuousFire = false;
     canFire = true;
     lastReleaseTime = 0;
+    
+    // 키보드 입력 상태 초기화
+    keys.ArrowLeft = false;
+    keys.ArrowRight = false;
+    keys.ArrowUp = false;
+    keys.ArrowDown = false;
+    keys.KeyB = false;
     
     console.log('게임 재시작 완료 - 현재 최고 점수:', highScore);
 }
