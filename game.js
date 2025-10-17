@@ -156,21 +156,24 @@ class GameSoundManager {
         }
         
         try {
-            // 볼륨 계산 (스페이스용과 동일한 방식)
-            const volume = options.volume !== undefined ? options.volume : this.volume;
+            // 볼륨 계산: 개별 볼륨 × 전역 볼륨
+            const individualVolume = options.volume !== undefined ? options.volume : this.volume;
+            const finalVolume = individualVolume * globalVolume;
             
             // Web Audio API를 사용한 고품질 재생 시도
             if (this.useWebAudioAPI && this.audioContext && this.audioBuffers[soundName]) {
-                await this.playWithWebAudioAPI(soundName, volume);
+                await this.playWithWebAudioAPI(soundName, finalVolume);
             } else {
                 // HTML5 Audio를 사용한 재생
-                await this.playWithHTML5Audio(soundName, volume);
+                await this.playWithHTML5Audio(soundName, finalVolume);
             }
         } catch (e) {
             console.error('Audio play failed:', e);
             // 재생 실패 시 HTML5 Audio로 fallback
             try {
-                await this.playWithHTML5Audio(soundName, volume);
+                const individualVolume = options.volume !== undefined ? options.volume : this.volume;
+                const finalVolume = individualVolume * globalVolume;
+                await this.playWithHTML5Audio(soundName, finalVolume);
             } catch (fallbackError) {
                 console.error('Fallback audio play also failed:', fallbackError);
             }
@@ -424,7 +427,7 @@ let lifeWarningBlinkDuration = 2000;  // 목숨 경고 깜빡임 지속 시간 (
 let lastLifeCount = 0;  // 이전 목숨 개수 (변화 감지용)
 
 // === 사운드 볼륨 전역 변수 및 함수 추가 (스페이스용과 동일) ===
-let globalVolume = 0.5;  // 전역 볼륨 (50% - 슬라이더바 기본값 10%에 맞춤)
+let globalVolume = 0.5;  // 전역 볼륨 (50% - 슬라이더바 기본값 50%에 맞춤)
 let isMuted = false;
 
 function applyGlobalVolume() {
@@ -5449,18 +5452,17 @@ function setupSoundControlEvents() {
     
     if (sfxVolumeSlider && volumeValue) {
         // 초기 볼륨 설정
-        const initialVolume = 10;
+        const initialVolume = 50; // 슬라이더바를 50%로 설정
         sfxVolumeSlider.value = initialVolume;
         volumeValue.textContent = `${initialVolume}%`;
         
-        // 전역 볼륨 설정 (슬라이더바 10% = 실제 볼륨 50%)
-        globalVolume = 0.5;
+        // 전역 볼륨 설정 (슬라이더바 값에 맞춤)
+        globalVolume = initialVolume / 100; // 50% = 0.5
         applyGlobalVolume();
         
         sfxVolumeSlider.addEventListener('input', function(e) {
             e.stopPropagation();
             // 슬라이더바 값(0-100)을 실제 볼륨(0-1)으로 변환
-            // 슬라이더바 10% = 실제 볼륨 0.5 (50%)
             const sliderValue = parseInt(this.value);
             globalVolume = sliderValue / 100; // 슬라이더바 값을 그대로 사용
             volumeValue.textContent = `${this.value}%`;
