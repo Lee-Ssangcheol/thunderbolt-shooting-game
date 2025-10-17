@@ -1346,7 +1346,7 @@ function handleEnemyBullets() {
                     pulse: 0     // 펄스 효과를 위한 변수 추가
                 });
                 // 플레이어 총알과 적 총알 충돌 시 shoot 효과음 재생
-                safePlaySound('shoot', { volume: 0.4 });
+                safePlaySound('shoot', { volume: 0.6 });
                 bullets.splice(i, 1);
                 return false;
             }
@@ -2332,7 +2332,7 @@ function handleSnakePattern() {
                             enemy.y + enemy.height/2
                         ));
                         updateScore(100);
-                        safePlaySound('shoot', { volume: 0.4 });
+                        safePlaySound('shoot', { volume: 0.6 });
                         enemy.isHit = true;
                         return false;
                     }
@@ -2537,7 +2537,7 @@ function checkEnemyCollisions(enemy) {
                 // 추가: 플레이어 총알이 적 비행기/헬기에 명중 시 발사음 재생 (보스/보호막 비행기 제외)
                 if (enemy.type !== ENEMY_TYPES.BOSS && 
                     !((enemy.type === ENEMY_TYPES.HELICOPTER || enemy.type === ENEMY_TYPES.HELICOPTER2) && enemy.shieldActive)) {
-                    safePlaySound('shoot', { volume: 0.4 });
+                    safePlaySound('shoot', { volume: 0.6 });
                 }
             }
                         
@@ -3288,7 +3288,7 @@ function handleBullets() {
                     // 충돌 시 폭발 효과 추가
                     explosions.push(new Explosion(bullet.x, bullet.y, false));
                     // 보스 총알과 플레이어 총알 충돌 시 shoot 효과음 재생
-                    safePlaySound('shoot', { volume: 0.4 });
+                    safePlaySound('shoot', { volume: 0.6 });
                     bullets.splice(i, 1);
                     return false; // 충돌한 보스 총알 제거
                 }
@@ -3301,7 +3301,7 @@ function handleBullets() {
                 // 총알 충돌 시 작은 폭발 효과
                 explosions.push(new Explosion(bullet.x, bullet.y, false));
                 // 보스 총알 피격 시 shoot 효과음 재생
-                safePlaySound('shoot', { volume: 0.4 });
+                safePlaySound('shoot', { volume: 0.6 });
                 return false;
             }
         } else if (bullet.isSpecial) {
@@ -3345,7 +3345,7 @@ function handleBullets() {
                 // 충돌 시 폭발 효과 추가
                 explosions.push(new Explosion(helicopterBullet.x, helicopterBullet.y, false));
                 // 헬리콥터 총알 피격 시 shoot 효과음 재생
-                safePlaySound('shoot', { volume: 0.4 });
+                safePlaySound('shoot', { volume: 0.6 });
                 // 헬리콥터 총알 제거
                 helicopterBullets.splice(i, 1);
                 // 플레이어 총알도 제거
@@ -4864,7 +4864,7 @@ function handleHelicopterBullets() {
                 explosions.push(new Explosion(bullet.x, bullet.y, false));
                 
                 // 플레이어 총알과 헬리콥터 총알 충돌 시 shoot 효과음 재생
-                safePlaySound('shoot', { volume: 0.4 });
+                safePlaySound('shoot', { volume: 0.6 });
                 
                 bullets.splice(i, 1);
                 return false; // 충돌한 헬리콥터 총알 제거
@@ -4876,7 +4876,7 @@ function handleHelicopterBullets() {
             handleCollision();
             explosions.push(new Explosion(bullet.x, bullet.y, false));
             // 헬리콥터 총알 피격 시 shoot 효과음 재생
-            safePlaySound('shoot', { volume: 0.4 });
+            safePlaySound('shoot', { volume: 0.6 });
             return false;
         }
         
