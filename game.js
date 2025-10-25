@@ -78,7 +78,7 @@ class GameSoundManager {
     
     // Web Audio API를 사용한 사운드 로드
     async loadSoundsWithWebAudioAPI() {
-        const soundFiles = ['shoot', 'explosion', 'collision', 'levelup', 'warning'];
+        const soundFiles = ['shoot', 'shoot2', 'explosion', 'collision', 'levelup', 'warning'];
         
         for (const soundName of soundFiles) {
             try {
@@ -108,7 +108,7 @@ class GameSoundManager {
     
     // HTML5 Audio를 사용한 사운드 로드
     async loadSoundsWithHTML5Audio() {
-        const soundFiles = ['shoot', 'explosion', 'collision', 'levelup', 'warning'];
+        const soundFiles = ['shoot', 'shoot2', 'explosion', 'collision', 'levelup', 'warning'];
         
         for (const soundName of soundFiles) {
             await this.loadSingleSoundWithHTML5Audio(soundName);
@@ -2541,9 +2541,17 @@ function checkEnemyCollisions(enemy) {
                     // 헬리콥터 파괴 시 폭발 효과음 재생
                     safePlaySound('explosion', { volume: 1.0 });
                 } else {
-                    // 일반 비행기 파괴 시 기존 효과
+                    // 일반 비행기 파괴 시 폭발 효과 추가
+                    explosions.push(new Explosion(
+                        enemy.x + enemy.width/2,
+                        enemy.y + enemy.height/2,
+                        false
+                    ));
+                    
                     console.log(`일반 비행기 파괴: 레벨 ${gameLevel}, 점수 10, 특수무기 개수 ${specialWeaponCount}`);
                     updateScore(10);
+                    // 일반 비행기 파괴 시 shoot2 효과음 재생
+                    safePlaySound('shoot2', { volume: 0.8 });
                 }
                 
                 // 추가: 플레이어 총알이 적 비행기/헬기에 명중 시 발사음 재생 (보스/보호막 비행기 제외)
@@ -3350,6 +3358,8 @@ function handleBullets() {
             ctx.fillRect(bullet.x - bullet.width/2, bullet.y - bullet.height/2, bullet.width, bullet.height);
         }
         
+        // 모든 총알 타입에 대해 충돌 체크 실행
+        
         // 헬리콥터 총알과 충돌 체크
         for (let i = helicopterBullets.length - 1; i >= 0; i--) {
             const helicopterBullet = helicopterBullets[i];
@@ -3370,7 +3380,8 @@ function handleBullets() {
             if (checkCollision(bullet, bomb)) {
                 // 폭탄 폭발
                 explosions.push(new Explosion(bomb.x, bomb.y, true));
-                // 폭탄 피격 시 효과음 제거
+                // 폭탄 피격 시 shoot 효과음 재생
+                safePlaySound('shoot', { volume: 0.7 });
                 return false;
             }
             return true;
