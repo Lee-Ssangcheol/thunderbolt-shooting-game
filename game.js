@@ -1,5 +1,5 @@
 // 게임 상수 정의
-const SPECIAL_WEAPON_MAX_CHARGE = 2000;  // 특수무기 최대 충전량 (2000점으로 완화)
+const SPECIAL_WEAPON_MAX_CHARGE = 4000;  // 특수무기 최대 충전량 (4000점 기준)
 const SPECIAL_WEAPON_CHARGE_RATE = 10;   // 특수무기 충전 속도
 const TOP_EFFECT_ZONE = 20;  // 상단 효과 무시 영역 (픽셀)
 
